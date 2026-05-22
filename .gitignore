@@ -1,0 +1,35 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build
+bin/
+obj/
+Debug/
+Release/
+x86/
+x64/
+
+# NuGet packages
+packages/
+*.nupkg
+
+# Logs/debug
+debug_*.txt
+*.log
+
+# Arquivos de símbolos
+*.pdb
+
+# Configurações locais sensíveis
+*.db
+*.db3
+*.sqlite
+*.sqlite3
+
+# Sistema operacional
+Thumbs.db
+Desktop.ini
