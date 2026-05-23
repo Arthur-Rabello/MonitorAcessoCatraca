@@ -1,4 +1,3 @@
-````md
 # MonitorAcessoCatraca
 
 Monitor de acessos em segundo plano para o **Controle de Acesso da Next Fit**, desenvolvido em **C# Windows Forms (.NET Framework)**.
@@ -415,4 +414,3 @@ Interface: Windows Forms
 Execução: Segundo plano na bandeja do Windows
 Endpoint: Configurado via .env
 ```
-````
