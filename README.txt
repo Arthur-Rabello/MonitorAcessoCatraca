@@ -1,5 +1,3 @@
-Claro, Arthur. Copie tudo abaixo e cole no seu `README.md`:
-
 ````md
 # MonitorAcessoCatraca
 
