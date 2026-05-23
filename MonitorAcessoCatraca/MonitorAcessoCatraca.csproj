@@ -5,7 +5,6 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{920DB306-52E6-460A-BD42-21A7F24DD572}</ProjectGuid>
-    <!-- IMPORTANTE: WinExe para abrir como aplicativo Windows, sem tela preta de console -->
     <OutputType>WinExe</OutputType>
     <RootNamespace>MonitorAcessoCatraca</RootNamespace>
     <AssemblyName>MonitorAcessoCatraca</AssemblyName>
@@ -101,10 +100,15 @@
     <Compile Include="DTOs\ConfiguracaoApiDto.cs" />
     <Compile Include="DTOs\LoginResponseDto.cs" />
     <Compile Include="Models\AcessoAutomatico.cs" />
-	<Compile Include="Program.cs" />
-    <Compile Include="Forms\FormPrincipal.cs" />
-    <Compile Include="Forms\FormNotificacaoAcesso.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Forms\FormPrincipal.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FormNotificacaoAcesso.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Services\AcessoAutomaticoParserService.cs" />
+    <Compile Include="Services\ProxyWindowsService.cs" />
     <Compile Include="Services\ClienteLocalService.cs" />
     <Compile Include="Services\ConfiguracaoService.cs" />
     <Compile Include="Services\NextFitAuthService.cs" />

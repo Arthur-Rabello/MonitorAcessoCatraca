@@ -80,9 +80,6 @@ namespace MonitorAcessoCatraca
             var jsonVazio = new StringContent("{}", Encoding.UTF8, "application/json");
 
             var response = await _http.PostAsync(url, jsonVazio);
-
-            // Se falhar, não vamos travar o monitor.
-            // Algumas contas já aceitaram os termos.
         }
 
         public async Task<List<AcessoRelatorio>> BuscarAcessosAsync(DateTime dataInicialLocal, DateTime dataFinalLocal, int pagina = 1, int limite = 30)

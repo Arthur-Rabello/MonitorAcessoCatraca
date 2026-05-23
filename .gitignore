@@ -17,19 +17,18 @@ x64/
 packages/
 *.nupkg
 
-# Logs/debug
+# Debug/logs
 debug_*.txt
 *.log
-
-# Arquivos de símbolos
 *.pdb
 
-# Configurações locais sensíveis
+# Configuração local/sensível
+.env
 *.db
 *.db3
 *.sqlite
 *.sqlite3
 
-# Sistema operacional
+# Sistema
 Thumbs.db
 Desktop.ini

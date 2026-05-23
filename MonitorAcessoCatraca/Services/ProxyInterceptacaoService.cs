@@ -6,8 +6,6 @@ using System.Threading.Tasks;
 using Titanium.Web.Proxy;
 using Titanium.Web.Proxy.EventArguments;
 using Titanium.Web.Proxy.Models;
-using Microsoft.Win32;
-using System.IO;
 
 namespace MonitorAcessoCatraca.Services
 {
@@ -16,93 +14,10 @@ namespace MonitorAcessoCatraca.Services
         private ProxyServer proxyServer;
         private ExplicitProxyEndPoint explicitEndPoint;
         private readonly AcessoAutomaticoParserService parserService;
-        private string pacPath;
-        private object valorAntigoProxyEnable;
-        private object valorAntigoProxyServer;
-        private object valorAntigoAutoConfigUrl;
 
         private bool iniciado = false;
 
         public event Action<AcessoAutomatico> AcessoCapturado;
-
-        private void ConfigurarPacSomenteNextFit()
-        {
-            pacPath = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                "monitor_nextfit_proxy.pac"
-            );
-
-            string pacConteudo =
-                @"function FindProxyForURL(url, host) {
-                        if (dnsDomainIs(host, ""acesso.nextfit.com.br"")) {
-                            return ""PROXY 127.0.0.1:" + AppConfig.PortaProxy + @""";
-                        }
-
-                        return ""DIRECT"";
-                    }";
-
-            File.WriteAllText(pacPath, pacConteudo);
-
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(
-                @"Software\Microsoft\Windows\CurrentVersion\Internet Settings",
-                true
-            ))
-            {
-                valorAntigoProxyEnable = key.GetValue("ProxyEnable");
-                valorAntigoProxyServer = key.GetValue("ProxyServer");
-                valorAntigoAutoConfigUrl = key.GetValue("AutoConfigURL");
-
-                key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
-                key.DeleteValue("ProxyServer", false);
-                key.SetValue("AutoConfigURL", "file:///" + pacPath.Replace("\\", "/"), RegistryValueKind.String);
-            }
-
-            AtualizarConfiguracaoInternet();
-        }
-
-        private void RestaurarConfiguracaoProxyWindows()
-        {
-            try
-            {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(
-                    @"Software\Microsoft\Windows\CurrentVersion\Internet Settings",
-                    true
-                ))
-                {
-                    if (valorAntigoProxyEnable != null)
-                        key.SetValue("ProxyEnable", valorAntigoProxyEnable, RegistryValueKind.DWord);
-                    else
-                        key.DeleteValue("ProxyEnable", false);
-
-                    if (valorAntigoProxyServer != null)
-                        key.SetValue("ProxyServer", valorAntigoProxyServer, RegistryValueKind.String);
-                    else
-                        key.DeleteValue("ProxyServer", false);
-
-                    if (valorAntigoAutoConfigUrl != null)
-                        key.SetValue("AutoConfigURL", valorAntigoAutoConfigUrl, RegistryValueKind.String);
-                    else
-                        key.DeleteValue("AutoConfigURL", false);
-                }
-
-                AtualizarConfiguracaoInternet();
-            }
-            catch
-            {
-            }
-        }
-
-        [System.Runtime.InteropServices.DllImport("wininet.dll", SetLastError = true)]
-        private static extern bool InternetSetOption(IntPtr hInternet, int dwOption, IntPtr lpBuffer, int dwBufferLength);
-
-        private const int INTERNET_OPTION_SETTINGS_CHANGED = 39;
-        private const int INTERNET_OPTION_REFRESH = 37;
-
-        private void AtualizarConfiguracaoInternet()
-        {
-            InternetSetOption(IntPtr.Zero, INTERNET_OPTION_SETTINGS_CHANGED, IntPtr.Zero, 0);
-            InternetSetOption(IntPtr.Zero, INTERNET_OPTION_REFRESH, IntPtr.Zero, 0);
-        }
 
         public ProxyInterceptacaoService(AcessoAutomaticoParserService parserService)
         {
@@ -117,7 +32,15 @@ namespace MonitorAcessoCatraca.Services
             proxyServer = new ProxyServer();
 
             proxyServer.CertificateManager.EnsureRootCertificate();
-            proxyServer.CertificateManager.TrustRootCertificate(true);
+
+            try
+            {
+                proxyServer.CertificateManager.TrustRootCertificate(true);
+            }
+            catch
+            {
+                
+            }
 
             proxyServer.BeforeResponse += OnBeforeResponse;
 
@@ -127,29 +50,65 @@ namespace MonitorAcessoCatraca.Services
                 true
             );
 
+            explicitEndPoint.BeforeTunnelConnectRequest += FiltrarTunnelConnectRequest;
+
             proxyServer.AddEndPoint(explicitEndPoint);
             proxyServer.Start();
-            ConfigurarPacSomenteNextFit();
+
+            proxyServer.SetAsSystemHttpProxy(explicitEndPoint);
+            proxyServer.SetAsSystemHttpsProxy(explicitEndPoint);
 
             iniciado = true;
         }
 
         public void Parar()
         {
-            if (!iniciado)
-                return;
-
             try
             {
-                RestaurarConfiguracaoProxyWindows();
+                if (explicitEndPoint != null)
+                {
+                    try
+                    {
+                        explicitEndPoint.BeforeTunnelConnectRequest -= FiltrarTunnelConnectRequest;
+                    }
+                    catch
+                    {
+                    }
+                }
 
                 if (proxyServer != null)
                 {
-                    proxyServer.BeforeTunnelConnectRequest -= OnBeforeTunnelConnectRequest;
-                    proxyServer.BeforeResponse -= OnBeforeResponse;
+                    try
+                    {
+                        proxyServer.BeforeResponse -= OnBeforeResponse;
+                    }
+                    catch
+                    {
+                    }
 
-                    proxyServer.Stop();
-                    proxyServer.Dispose();
+                    try
+                    {
+                        proxyServer.DisableAllSystemProxies();
+                    }
+                    catch
+                    {
+                    }
+
+                    try
+                    {
+                        proxyServer.Stop();
+                    }
+                    catch
+                    {
+                    }
+
+                    try
+                    {
+                        proxyServer.Dispose();
+                    }
+                    catch
+                    {
+                    }
                 }
             }
             catch
@@ -160,7 +119,44 @@ namespace MonitorAcessoCatraca.Services
                 proxyServer = null;
                 explicitEndPoint = null;
                 iniciado = false;
+
+                ProxyWindowsService.DesativarProxyWindows();
             }
+        }
+
+        private Task FiltrarTunnelConnectRequest(object sender, TunnelConnectSessionEventArgs e)
+        {
+            bool deveDescriptografar = false;
+
+            try
+            {
+                if (e == null || e.HttpClient == null || e.HttpClient.Request == null)
+                {
+                    e.DecryptSsl = false;
+                    return Task.CompletedTask;
+                }
+
+                Uri uri = e.HttpClient.Request.RequestUri;
+
+                if (uri == null)
+                {
+                    e.DecryptSsl = false;
+                    return Task.CompletedTask;
+                }
+
+                string host = uri.Host;
+
+                if (host.Equals(AppConfig.HostAcesso, StringComparison.OrdinalIgnoreCase))
+                    deveDescriptografar = true;
+
+                e.DecryptSsl = deveDescriptografar;
+            }
+            catch
+            {
+                e.DecryptSsl = false;
+            }
+
+            return Task.CompletedTask;
         }
 
         private async Task OnBeforeResponse(object sender, SessionEventArgs e)
@@ -175,10 +171,20 @@ namespace MonitorAcessoCatraca.Services
                 if (uri == null)
                     return;
 
-                bool hostCorreto = uri.Host.Equals(AppConfig.HostAcesso, StringComparison.OrdinalIgnoreCase);
-                bool endpointCorreto = uri.AbsolutePath.Equals(AppConfig.EndpointAcessoAutomatico, StringComparison.OrdinalIgnoreCase);
+                bool hostCorreto = uri.Host.Equals(
+                    AppConfig.HostAcesso,
+                    StringComparison.OrdinalIgnoreCase
+                );
 
-                if (!hostCorreto || !endpointCorreto)
+                if (!hostCorreto)
+                    return;
+
+                bool endpointCorreto = uri.AbsolutePath.IndexOf(
+                    AppConfig.EndpointAcessoAutomatico,
+                    StringComparison.OrdinalIgnoreCase
+                ) >= 0;
+
+                if (!endpointCorreto)
                     return;
 
                 string json = await e.GetResponseBodyAsString();
@@ -195,7 +201,7 @@ namespace MonitorAcessoCatraca.Services
             }
             catch
             {
-                // Não trava o proxy por erro de leitura ou parse.
+                
             }
         }
     }

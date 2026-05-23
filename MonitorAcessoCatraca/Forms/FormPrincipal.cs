@@ -147,12 +147,26 @@ namespace MonitorAcessoCatraca.Forms
             ToolStripMenuItem sairItem = new ToolStripMenuItem("Sair");
             sairItem.Click += (s, e) =>
             {
+                try
+                {
+                    if (proxyService != null)
+                        proxyService.Parar();
+
+                    ProxyWindowsService.ExecutarComandoDesativarProxy();
+                    ProxyWindowsService.DesativarProxyWindows();
+                }
+                catch
+                {
+                }
+
                 if (notifyIcon != null)
+                {
                     notifyIcon.Visible = false;
+                    notifyIcon.Dispose();
+                }
 
                 Application.Exit();
             };
-
             menuBandeja.Items.Add(abrirItem);
             menuBandeja.Items.Add(new ToolStripSeparator());
             menuBandeja.Items.Add(iniciarItem);
@@ -284,6 +298,8 @@ namespace MonitorAcessoCatraca.Forms
             {
                 if (proxyService != null)
                     proxyService.Parar();
+
+                ProxyWindowsService.DesativarProxyWindows();
             }
             catch
             {
@@ -295,7 +311,7 @@ namespace MonitorAcessoCatraca.Forms
             btnParar.Enabled = false;
             lblStatus.Text = "Status: parado manualmente";
 
-            AdicionarLog("Monitoramento parado manualmente.");
+            AdicionarLog("Monitoramento parado manualmente. Proxy do Windows desativado.");
         }
 
         private void ProxyService_AcessoCapturado(AcessoAutomatico acesso)
@@ -351,39 +367,24 @@ namespace MonitorAcessoCatraca.Forms
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (e.CloseReason == CloseReason.UserClosing)
+            try
             {
-                e.Cancel = true;
-                Hide();
-                ShowInTaskbar = false;
+                if (timerVerificarControleAcesso != null)
+                    timerVerificarControleAcesso.Stop();
+
+                if (proxyService != null)
+                    proxyService.Parar();
+
+                ProxyWindowsService.DesativarProxyWindows();
 
                 if (notifyIcon != null)
                 {
-                    notifyIcon.BalloonTipTitle = "Monitor de Acessos";
-                    notifyIcon.BalloonTipText = "O monitor continuará rodando em segundo plano.";
-                    notifyIcon.BalloonTipIcon = ToolTipIcon.Info;
-                    notifyIcon.ShowBalloonTip(3000);
+                    notifyIcon.Visible = false;
+                    notifyIcon.Dispose();
                 }
-
-                return;
-            }
-
-            if (timerVerificarControleAcesso != null)
-                timerVerificarControleAcesso.Stop();
-
-            try
-            {
-                if (proxyService != null)
-                    proxyService.Parar();
             }
             catch
             {
-            }
-
-            if (notifyIcon != null)
-            {
-                notifyIcon.Visible = false;
-                notifyIcon.Dispose();
             }
 
             base.OnFormClosing(e);
