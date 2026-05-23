@@ -1,67 +1,186 @@
-MonitorAcessoCatraca - Monitor de Acessos em Segundo Plano
+Claro. Segue um `README.md` mais bonito, organizado e atualizado para a versão atual do projeto.
 
-DESCRIÇÃO
-----------
-O MonitorAcessoCatraca é um aplicativo Windows Forms em C# desenvolvido para monitorar tentativas de acesso realizadas pelo Controle de Acesso da Next Fit.
+Pode substituir o conteúdo do seu README por este. Ele mantém a ideia principal do arquivo que você enviou, mas com uma estrutura mais profissional e limpa. 
 
-O programa funciona em segundo plano, na bandeja do Windows, e exibe uma notificação no canto inferior direito sempre que uma tentativa de acesso for identificada.
+````md
+# MonitorAcessoCatraca
 
-A versão atual monitora a comunicação HTTPS feita pelo ControleAcesso.exe com o endpoint:
+Monitor de acessos em segundo plano para o **Controle de Acesso da Next Fit**, desenvolvido em **C# Windows Forms (.NET Framework)**.
 
-https://acesso.nextfit.com.br/api/v1/ContratoClienteAcesso/AcessoAutomatico
+O sistema acompanha as tentativas de acesso realizadas pelo `ControleAcesso.exe` e exibe uma notificação no canto inferior direito do Windows informando se o acesso foi **liberado** ou **bloqueado**.
 
-A resposta dessa requisição é utilizada para identificar se o acesso foi liberado ou bloqueado.
+---
 
+## 📌 Objetivo
 
-FUNCIONAMENTO
--------------
-O fluxo do sistema é:
+O objetivo do projeto é permitir que a recepção ou o responsável pelo ambiente visualize rapidamente, em forma de pop-up, os acessos realizados na catraca/leitor facial, sem precisar abrir relatórios manualmente.
 
-1. O MonitorAcessoCatraca é iniciado.
+O monitor funciona em segundo plano, na bandeja do Windows, e acompanha a comunicação realizada pelo Controle de Acesso com a rota responsável pela validação automática.
+
+---
+
+## ⚙️ Funcionamento
+
+Fluxo geral da aplicação:
+
+1. O `MonitorAcessoCatraca` é iniciado.
 2. O programa fica em segundo plano na bandeja do Windows.
-3. Ele verifica se o processo ControleAcesso.exe está aberto.
-4. Se o ControleAcesso.exe não estiver aberto, o monitor tenta abri-lo automaticamente.
-5. O monitor inicia um proxy local para acompanhar a comunicação HTTPS do Controle de Acesso.
-6. Quando o Controle de Acesso chama o endpoint AcessoAutomatico, o monitor captura a resposta.
-7. A resposta é convertida para um modelo interno.
-8. Quando necessário, o nome do cliente é buscado no banco local banco.db3.
-9. Uma notificação é exibida no canto inferior direito do computador.
+3. Ele verifica se o processo `ControleAcesso.exe` está aberto.
+4. Se necessário, pode tentar abrir o Controle de Acesso automaticamente.
+5. O monitor inicia um proxy local para acompanhar a comunicação HTTPS.
+6. Quando o Controle de Acesso chama o endpoint de validação automática, a resposta é capturada.
+7. A resposta é interpretada pelo sistema.
+8. O monitor exibe uma notificação com o resultado do acesso.
 
+---
 
-REQUISITOS
-----------
-- Windows
-- .NET Framework 4.7.2 ou 4.8
-- Visual Studio com suporte a Windows Forms
-- Permissão de administrador para instalação/configuração do certificado HTTPS local
-- Controle de Acesso da Next Fit instalado em:
+## 🔔 Notificação exibida
 
-  C:\Program Files (x86)\Next Fit\Controle de acesso
+Quando um acesso é capturado, o sistema mostra uma notificação contendo:
 
-- Banco local esperado em:
+- status do acesso;
+- nome do cliente;
+- horário;
+- serviço/contrato, quando disponível;
+- motivo do bloqueio ou autorização.
 
-  C:\Program Files (x86)\Next Fit\Controle de acesso\banco.db3
+Exemplos de status:
 
+```text
+ACESSO LIBERADO
+ACESSO BLOQUEADO
+````
 
-PACOTES NUGET NECESSÁRIOS
--------------------------
-Instale os seguintes pacotes no projeto:
+---
 
-- Newtonsoft.Json
-- System.Data.SQLite.Core
-- Titanium.Web.Proxy
+## 🧩 Endpoint monitorado
 
-Pelo Console do Gerenciador de Pacotes NuGet:
+O endpoint monitorado é configurado via `.env`.
 
-Install-Package Newtonsoft.Json
-Install-Package System.Data.SQLite.Core
-Install-Package Titanium.Web.Proxy
+Exemplo:
 
+```env
+HOST_ACESSO=acesso.nextfit.com.br
+ENDPOINT_ACESSO_AUTOMATICO=ContratoClienteAcesso/AcessoAutomatico
+```
 
-ESTRUTURA DO PROJETO
---------------------
+A rota monitorada corresponde à validação automática de acesso realizada pelo Controle de Acesso.
+
+---
+
+## ✅ Regra de interpretação
+
+A resposta da validação possui uma estrutura semelhante a:
+
+```json
+{
+  "Content": {
+    "CodigoCliente": 29920661,
+    "CodigoContratoCliente": 59956052,
+    "Servico": "Musculação",
+    "DataValidade": "2026-06-21T03:00:00Z",
+    "Erro": false,
+    "Mensagem": null,
+    "MotivoErro": null
+  },
+  "Message": "",
+  "Success": true
+}
+```
+
+A regra utilizada pelo monitor é:
+
+```text
+Content.Erro = false → acesso liberado
+Content.Erro = true  → acesso bloqueado
+```
+
+O motivo exibido na notificação é definido nesta ordem:
+
+1. `Content.MotivoErro`
+2. `Content.Mensagem`
+3. Mensagem padrão do monitor
+
+---
+
+## 👤 Nome do cliente
+
+Quando a resposta possui `CodigoCliente` maior que zero, o monitor tenta buscar o nome do cliente no banco local `banco.db3`.
+
+Banco esperado:
+
+```text
+C:\Program Files (x86)\Next Fit\Controle de acesso\banco.db3
+```
+
+Quando `CodigoCliente` vem zerado, o monitor tenta extrair o nome a partir da mensagem retornada pela API.
+
+Exemplo:
+
+```text
+Mensagem:
+Ederaldo Inácio. Acesso inválido, entre em contato com a recepção.
+
+Nome identificado:
+Ederaldo Inácio
+```
+
+---
+
+## 🖥️ Execução em segundo plano
+
+O programa foi desenvolvido para funcionar em segundo plano:
+
+* fica disponível na bandeja do Windows;
+* pode abrir o Controle de Acesso automaticamente;
+* exibe notificações no canto inferior direito;
+* permite abrir a tela de log pelo ícone da bandeja;
+* pode continuar rodando mesmo com a janela principal oculta;
+* encerra de verdade pela opção **Sair** no menu da bandeja.
+
+---
+
+## 🔐 Certificado HTTPS
+
+Como a comunicação monitorada é HTTPS, o programa utiliza o `Titanium.Web.Proxy` para interceptar a resposta da requisição.
+
+Na primeira execução, o Windows pode solicitar permissão para confiar no certificado:
+
+```text
+Titanium Root Certificate Authority
+```
+
+Essa etapa é necessária para que o monitor consiga ler a resposta HTTPS.
+
+Depois que o certificado estiver instalado e confiável, a solicitação não deve aparecer novamente.
+
+---
+
+## 🌐 Proxy do Windows
+
+O monitor utiliza proxy local para acompanhar a comunicação do Controle de Acesso.
+
+A versão atual usa um filtro para descriptografar apenas o host configurado em:
+
+```env
+HOST_ACESSO=acesso.nextfit.com.br
+```
+
+Ao parar ou encerrar o programa, o proxy do Windows deve ser desativado automaticamente.
+
+O serviço responsável por essa limpeza é:
+
+```text
+ProxyWindowsService.cs
+```
+
+---
+
+## 📁 Estrutura do projeto
+
 Estrutura recomendada:
 
+```text
 MonitorAcessoCatraca
 │
 ├── Config
@@ -85,7 +204,8 @@ MonitorAcessoCatraca
 │   ├── ConfiguracaoService.cs
 │   ├── NextFitAuthService.cs
 │   ├── ProcessoService.cs
-│   └── ProxyInterceptacaoService.cs
+│   ├── ProxyInterceptacaoService.cs
+│   └── ProxyWindowsService.cs
 │
 ├── Utils
 │   ├── JsonHelper.cs
@@ -98,237 +218,207 @@ MonitorAcessoCatraca
 ├── packages.config
 ├── Program.cs
 └── MonitorAcessoCatraca.csproj
+```
 
+---
 
-CONFIGURAÇÃO PRINCIPAL
-----------------------
-As configurações fixas ficam em:
+## 📦 Requisitos
 
-Config\AppConfig.cs
+* Windows
+* Visual Studio
+* .NET Framework 4.7.2 ou 4.8
+* Controle de Acesso da Next Fit instalado
+* Permissão para instalar/confiar certificado local
+* Permissão para configurar/desativar proxy do Windows
 
-Esse arquivo centraliza:
+Caminho padrão do Controle de Acesso:
 
-- pasta do Controle de Acesso;
-- caminho do banco.db3;
-- nome do processo ControleAcesso;
-- nome do executável ControleAcesso.exe;
-- host monitorado;
-- endpoint monitorado;
-- porta do proxy local.
-
-Configurações principais:
-
-Pasta do Controle de Acesso:
+```text
 C:\Program Files (x86)\Next Fit\Controle de acesso
+```
 
-Banco local:
-C:\Program Files (x86)\Next Fit\Controle de acesso\banco.db3
+Executável esperado:
 
-Executável:
+```text
 C:\Program Files (x86)\Next Fit\Controle de acesso\ControleAcesso.exe
+```
 
-Processo:
-ControleAcesso
+---
 
-Host monitorado:
-acesso.nextfit.com.br
+## 📚 Pacotes NuGet
 
-Endpoint monitorado:
-/api/v1/ContratoClienteAcesso/AcessoAutomatico
+Instale os pacotes abaixo:
 
+```powershell
+Install-Package Newtonsoft.Json
+Install-Package System.Data.SQLite.Core
+Install-Package Titanium.Web.Proxy
+```
 
-CERTIFICADO HTTPS
------------------
-Como a comunicação monitorada é HTTPS, o programa utiliza um proxy local para conseguir ler a resposta da requisição.
+---
 
-Para isso, é necessário instalar/confiar em um certificado raiz local gerado pelo Titanium.Web.Proxy.
+## 🔧 Configuração do `.env`
 
-Na primeira execução, o Windows pode exibir uma solicitação para confiar no certificado:
+Crie um arquivo `.env` na raiz do projeto ou junto ao executável.
 
-Titanium Root Certificate Authority
+Conteúdo:
 
-Essa etapa é necessária para que o monitor consiga ler a resposta da requisição HTTPS.
+```env
+HOST_ACESSO=acesso.nextfit.com.br
+ENDPOINT_ACESSO_AUTOMATICO=ContratoClienteAcesso/AcessoAutomatico
+```
 
-Depois que o certificado estiver instalado e confiável, a solicitação não deve aparecer novamente em execuções futuras.
+O arquivo `.env` não deve ser enviado ao Git.
 
+Crie também um `.env.example`:
 
-EXECUÇÃO EM SEGUNDO PLANO
--------------------------
-O programa foi feito para funcionar em segundo plano:
+```env
+HOST_ACESSO=acesso.nextfit.com.br
+ENDPOINT_ACESSO_AUTOMATICO=ContratoClienteAcesso/AcessoAutomatico
+```
 
-- inicia e fica disponível na bandeja do Windows;
-- pode abrir o ControleAcesso.exe automaticamente;
-- monitora a comunicação do Controle de Acesso;
-- exibe notificações no canto inferior direito;
-- permite abrir a tela de log pelo ícone da bandeja;
-- ao clicar no X, a janela pode ser ocultada sem encerrar o monitor;
-- para encerrar de verdade, use a opção Sair no menu da bandeja.
+---
 
+## 🚫 Arquivos ignorados no Git
 
-CONTROLE DE ACESSO
-------------------
-O monitor verifica se o processo abaixo está aberto:
+Recomenda-se manter no `.gitignore`:
 
-ControleAcesso.exe
+```gitignore
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
 
-No C#, o processo é identificado como:
+# Build
+bin/
+obj/
+Debug/
+Release/
+x86/
+x64/
 
-ControleAcesso
+# NuGet
+packages/
+*.nupkg
 
-Se o processo não estiver aberto, o monitor tenta executar:
+# Logs e debug
+debug_*.txt
+*.log
+*.pdb
 
-C:\Program Files (x86)\Next Fit\Controle de acesso\ControleAcesso.exe
+# Configurações locais
+.env
+*.db
+*.db3
+*.sqlite
+*.sqlite3
 
-A abertura automática pode ser limitada para ocorrer apenas uma vez, evitando que o monitor fique reabrindo o Controle de Acesso caso o usuário feche manualmente.
+# Sistema
+Thumbs.db
+Desktop.ini
+```
 
+---
 
-ENDPOINT MONITORADO
--------------------
-Endpoint interceptado:
+## ▶️ Como executar em desenvolvimento
 
-https://acesso.nextfit.com.br/api/v1/ContratoClienteAcesso/AcessoAutomatico
-
-Exemplo de resposta com acesso liberado:
-
-{
-  "Content": {
-    "CodigoCliente": 29920661,
-    "CodigoContratoCliente": 59956052,
-    "DataValidade": "2026-06-21T03:00:00Z",
-    "Erro": false,
-    "Mensagem": null,
-    "MotivoErro": null,
-    "ProximoValorReceber": null,
-    "ProximoVencimentoReceber": null,
-    "Servico": "Musculação"
-  },
-  "Message": "",
-  "Success": true
-}
-
-Exemplo de resposta com acesso bloqueado:
-
-{
-  "Content": {
-    "CodigoCliente": 0,
-    "CodigoContratoCliente": null,
-    "DataValidade": "0001-01-01T03:06:00Z",
-    "Erro": true,
-    "Mensagem": "Ederaldo Inácio. Acesso inválido, entre em contato com a recepção.",
-    "MotivoErro": "Cliente sem contrato ativo",
-    "ProximoValorReceber": null,
-    "ProximoVencimentoReceber": null,
-    "Servico": null
-  },
-  "Message": "",
-  "Success": true
-}
-
-
-REGRA DE INTERPRETAÇÃO
-----------------------
-A regra usada pelo monitor é:
-
-Content.Erro = false
-→ acesso liberado
-
-Content.Erro = true
-→ acesso bloqueado
-
-O motivo exibido na notificação é definido nesta ordem:
-
-1. Content.MotivoErro
-2. Content.Mensagem
-3. Mensagem padrão do monitor
-
-
-NOME DO CLIENTE
----------------
-Quando a resposta contém CodigoCliente maior que zero, o monitor tenta buscar o nome do cliente no banco local banco.db3, na tabela CLIENTES.
-
-Quando CodigoCliente vem zerado, o monitor tenta extrair o nome a partir de Content.Mensagem.
-
-Exemplo:
-
-Mensagem:
-Ederaldo Inácio. Acesso inválido, entre em contato com a recepção.
-
-Nome identificado:
-Ederaldo Inácio
-
-
-NOTIFICAÇÃO
------------
-Quando um acesso é capturado, o sistema exibe uma notificação com:
-
-- status do acesso;
-- nome do cliente;
-- horário;
-- serviço, quando disponível;
-- motivo do bloqueio ou autorização.
-
-Exemplos de status:
-
-ACESSO LIBERADO
-ACESSO BLOQUEADO
-
-
-COMO COMPILAR
--------------
 1. Abra a solução no Visual Studio.
-2. Confirme que o projeto está em .NET Framework 4.7.2 ou 4.8.
-3. Restaure os pacotes NuGet.
-4. Compile em modo Release.
-5. Acesse a pasta:
+2. Restaure os pacotes NuGet.
+3. Crie o arquivo `.env`.
+4. Compile o projeto.
+5. Execute o `MonitorAcessoCatraca`.
+6. Permita a instalação do certificado, se solicitado.
+7. Abra o `ControleAcesso.exe`.
+8. Faça uma tentativa de acesso.
+9. Verifique a notificação exibida no canto inferior direito.
 
-   bin\Release
+---
 
-6. Distribua a pasta Release com todas as DLLs necessárias.
+## 🏗️ Como compilar para distribuição
 
+1. No Visual Studio, selecione o modo `Release`.
+2. Compile a solução.
+3. Acesse a pasta:
 
-ARQUIVOS NECESSÁRIOS PARA DISTRIBUIÇÃO
---------------------------------------
-Na pasta Release, normalmente devem ser incluídos:
+```text
+bin\Release
+```
 
-- MonitorAcessoCatraca.exe
-- MonitorAcessoCatraca.exe.config
-- Newtonsoft.Json.dll
-- System.Data.SQLite.dll
-- Titanium.Web.Proxy.dll
-- demais DLLs geradas pelo NuGet
-- pasta x86
-- pasta x64
+4. Distribua o executável junto com as DLLs necessárias.
 
-As pastas x86 e x64 são importantes para o funcionamento do SQLite, pois podem conter DLLs nativas necessárias.
+Arquivos normalmente necessários:
 
+```text
+MonitorAcessoCatraca.exe
+MonitorAcessoCatraca.exe.config
+Newtonsoft.Json.dll
+System.Data.SQLite.dll
+Titanium.Web.Proxy.dll
+demais DLLs geradas pelo NuGet
+x86\
+x64\
+.env
+```
 
-INSTALADOR
-----------
-Para ambiente de cliente, recomenda-se criar um instalador com Inno Setup.
+As pastas `x86` e `x64` são importantes para o funcionamento do SQLite.
+
+---
+
+## 📦 Instalador
+
+Para ambiente de cliente, recomenda-se criar um instalador com **Inno Setup**.
 
 O instalador pode:
 
-- copiar os arquivos do programa;
-- criar atalho;
-- configurar inicialização com o Windows;
-- solicitar permissão de administrador;
-- instalar o certificado, se necessário;
-- executar o monitor ao final da instalação.
+* copiar os arquivos do programa;
+* incluir o `.env`;
+* criar atalho;
+* configurar inicialização com o Windows;
+* solicitar permissão de administrador;
+* instalar/confiar o certificado, se necessário;
+* executar o monitor ao final da instalação.
 
+---
 
-OBSERVAÇÕES IMPORTANTES
------------------------
+## ⚠️ Observações importantes
+
 1. A interceptação HTTPS exige certificado confiável no Windows.
-2. O programa deve ser executado com permissões adequadas para configurar o proxy local.
-3. O monitor depende do ControleAcesso.exe para gerar a requisição monitorada.
-4. Se o endpoint da Next Fit mudar, atualize AppConfig.EndpointAcessoAutomatico.
-5. Se o executável do Controle de Acesso mudar de nome, atualize AppConfig.NomeProcessoControleAcesso e AppConfig.NomeExecutavelControleAcesso.
-6. O banco local é usado apenas para complementar informações do cliente quando necessário.
+2. O monitor depende do `ControleAcesso.exe` gerar a requisição monitorada.
+3. O programa deve limpar/desativar o proxy do Windows ao parar ou fechar.
+4. O banco local é usado apenas para complementar informações do cliente.
+5. Se o endpoint mudar, atualize o `.env`.
+6. Se o caminho do Controle de Acesso mudar, atualize `AppConfig.cs`.
+7. Arquivos de debug não devem ser enviados ao Git.
+8. O arquivo `.env` não deve ser enviado ao repositório.
 
+---
 
-VERSÃO ATUAL
-------------
+## 🧪 Testes recomendados
+
+Antes de instalar em cliente, teste:
+
+* acesso liberado;
+* acesso bloqueado;
+* fechamento pelo botão **Sair**;
+* limpeza do proxy do Windows;
+* abertura automática do Controle de Acesso;
+* execução em segundo plano;
+* inicialização junto com o Windows;
+* funcionamento após reiniciar o computador.
+
+---
+
+## 📝 Versão atual
+
+```text
 Versão: 2.0
-Modelo de monitoramento: interceptação HTTPS local
-Endpoint monitorado: /api/v1/ContratoClienteAcesso/AcessoAutomatico
-Execução: segundo plano na bandeja do Windows
+Modelo: Interceptação HTTPS local otimizada
+Interface: Windows Forms
+Execução: Segundo plano na bandeja do Windows
+Endpoint: Configurado via .env
+```
+
+```
+```
