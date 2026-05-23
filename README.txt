@@ -1,6 +1,4 @@
-Claro. Segue um `README.md` mais bonito, organizado e atualizado para a versão atual do projeto.
-
-Pode substituir o conteúdo do seu README por este. Ele mantém a ideia principal do arquivo que você enviou, mas com uma estrutura mais profissional e limpa. 
+Claro, Arthur. Copie tudo abaixo e cole no seu `README.md`:
 
 ````md
 # MonitorAcessoCatraca
@@ -49,7 +47,7 @@ Exemplos de status:
 ```text
 ACESSO LIBERADO
 ACESSO BLOQUEADO
-````
+```
 
 ---
 
@@ -131,12 +129,12 @@ Ederaldo Inácio
 
 O programa foi desenvolvido para funcionar em segundo plano:
 
-* fica disponível na bandeja do Windows;
-* pode abrir o Controle de Acesso automaticamente;
-* exibe notificações no canto inferior direito;
-* permite abrir a tela de log pelo ícone da bandeja;
-* pode continuar rodando mesmo com a janela principal oculta;
-* encerra de verdade pela opção **Sair** no menu da bandeja.
+- fica disponível na bandeja do Windows;
+- pode abrir o Controle de Acesso automaticamente;
+- exibe notificações no canto inferior direito;
+- permite abrir a tela de log pelo ícone da bandeja;
+- pode continuar rodando mesmo com a janela principal oculta;
+- encerra de verdade pela opção **Sair** no menu da bandeja.
 
 ---
 
@@ -224,12 +222,12 @@ MonitorAcessoCatraca
 
 ## 📦 Requisitos
 
-* Windows
-* Visual Studio
-* .NET Framework 4.7.2 ou 4.8
-* Controle de Acesso da Next Fit instalado
-* Permissão para instalar/confiar certificado local
-* Permissão para configurar/desativar proxy do Windows
+- Windows
+- Visual Studio
+- .NET Framework 4.7.2 ou 4.8
+- Controle de Acesso da Next Fit instalado
+- Permissão para instalar/confiar certificado local
+- Permissão para configurar/desativar proxy do Windows
 
 Caminho padrão do Controle de Acesso:
 
@@ -372,13 +370,13 @@ Para ambiente de cliente, recomenda-se criar um instalador com **Inno Setup**.
 
 O instalador pode:
 
-* copiar os arquivos do programa;
-* incluir o `.env`;
-* criar atalho;
-* configurar inicialização com o Windows;
-* solicitar permissão de administrador;
-* instalar/confiar o certificado, se necessário;
-* executar o monitor ao final da instalação.
+- copiar os arquivos do programa;
+- incluir o `.env`;
+- criar atalho;
+- configurar inicialização com o Windows;
+- solicitar permissão de administrador;
+- instalar/confiar o certificado, se necessário;
+- executar o monitor ao final da instalação.
 
 ---
 
@@ -399,14 +397,14 @@ O instalador pode:
 
 Antes de instalar em cliente, teste:
 
-* acesso liberado;
-* acesso bloqueado;
-* fechamento pelo botão **Sair**;
-* limpeza do proxy do Windows;
-* abertura automática do Controle de Acesso;
-* execução em segundo plano;
-* inicialização junto com o Windows;
-* funcionamento após reiniciar o computador.
+- acesso liberado;
+- acesso bloqueado;
+- fechamento pelo botão **Sair**;
+- limpeza do proxy do Windows;
+- abertura automática do Controle de Acesso;
+- execução em segundo plano;
+- inicialização junto com o Windows;
+- funcionamento após reiniciar o computador.
 
 ---
 
@@ -419,6 +417,4 @@ Interface: Windows Forms
 Execução: Segundo plano na bandeja do Windows
 Endpoint: Configurado via .env
 ```
-
-```
-```
+````
