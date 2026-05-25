@@ -99,7 +99,9 @@
     <Compile Include="DTOs\AcessoAutomaticoResponseDto.cs" />
     <Compile Include="DTOs\ConfiguracaoApiDto.cs" />
     <Compile Include="DTOs\LoginResponseDto.cs" />
+    <Compile Include="DTOs\AcessoRelatorioDto.cs" />
     <Compile Include="Models\AcessoAutomatico.cs" />
+	<Compile Include="Models\AcessoRelatorio.cs" /> 
     <Compile Include="Program.cs" />
     <Compile Include="Forms\FormPrincipal.cs">
       <SubType>Form</SubType>
@@ -113,6 +115,7 @@
     <Compile Include="Services\ConfiguracaoService.cs" />
     <Compile Include="Services\NextFitAuthService.cs" />
     <Compile Include="Services\ProcessoService.cs" />
+	<Compile Include="Services\RelatorioAcessoService.cs" /> 
     <Compile Include="Services\ProxyInterceptacaoService.cs" />
     <Compile Include="Utils\JsonHelper.cs" />
     <Compile Include="Utils\JwtHelper.cs" />

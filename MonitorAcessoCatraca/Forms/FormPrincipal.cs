@@ -1,9 +1,12 @@
 using MonitorAcessoCatraca.Config;
+using MonitorAcessoCatraca.DTOs;
 using MonitorAcessoCatraca.Models;
 using MonitorAcessoCatraca.Services;
 using System;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Net.Http;
 
 namespace MonitorAcessoCatraca.Forms
 {
@@ -21,12 +24,15 @@ namespace MonitorAcessoCatraca.Forms
         private ContextMenuStrip menuBandeja;
 
         private ProcessoService processoService;
-        private ClienteLocalService clienteLocalService;
-        private AcessoAutomaticoParserService parserService;
         private ProxyInterceptacaoService proxyService;
+        private RelatorioAcessoService relatorioAcessoService;
+        private ConfiguracaoService configuracaoService;
+        private NextFitAuthService nextFitAuthService;
 
         private bool proxyIniciado = false;
         private bool paradoManualmente = false;
+        private bool consultandoRelatorio = false;
+        private long ultimoAcessoNotificado = 0;
 
         public FormPrincipal()
         {
@@ -42,7 +48,7 @@ namespace MonitorAcessoCatraca.Forms
 
             lblInfo = new Label
             {
-                Text = "Interceptando: " + AppConfig.HostAcesso + AppConfig.EndpointAcessoAutomatico,
+                Text = "Monitorando: " + AppConfig.HostAcesso + " / " + AppConfig.EndpointAcessoAutomatico,
                 Left = 20,
                 Top = 25,
                 Width = 790,
@@ -101,10 +107,12 @@ namespace MonitorAcessoCatraca.Forms
             Controls.Add(txtLog);
 
             processoService = new ProcessoService();
-            clienteLocalService = new ClienteLocalService();
-            parserService = new AcessoAutomaticoParserService(clienteLocalService);
-            proxyService = new ProxyInterceptacaoService(parserService);
-            proxyService.AcessoCapturado += ProxyService_AcessoCapturado;
+            relatorioAcessoService = new RelatorioAcessoService();
+            configuracaoService = new ConfiguracaoService();
+            nextFitAuthService = new NextFitAuthService(new HttpClient());
+
+            proxyService = new ProxyInterceptacaoService();
+            proxyService.AcessoAutomaticoDetectado += ProxyService_AcessoAutomaticoDetectado;
 
             timerVerificarControleAcesso = new Timer();
             timerVerificarControleAcesso.Interval = 5000;
@@ -167,6 +175,7 @@ namespace MonitorAcessoCatraca.Forms
 
                 Application.Exit();
             };
+
             menuBandeja.Items.Add(abrirItem);
             menuBandeja.Items.Add(new ToolStripSeparator());
             menuBandeja.Items.Add(iniciarItem);
@@ -249,6 +258,117 @@ namespace MonitorAcessoCatraca.Forms
             }
         }
 
+        private async void ProxyService_AcessoAutomaticoDetectado()
+        {
+            if (consultandoRelatorio)
+                return;
+
+            consultandoRelatorio = true;
+
+            try
+            {
+                AdicionarLog("AcessoAutomatico detectado. Consultando último acesso no relatório...");
+
+                await Task.Delay(1500);
+
+                await ObterLoginAtualAsync();
+
+                int codigoUnidade;
+
+                if (!int.TryParse(nextFitAuthService.CodigoUnidade, out codigoUnidade))
+                    throw new Exception("Código da unidade inválido: " + nextFitAuthService.CodigoUnidade);
+
+                AcessoRelatorio ultimo = await relatorioAcessoService.BuscarUltimoAcessoAsync(
+                    nextFitAuthService.Token,
+                    codigoUnidade
+                );
+
+                if (ultimo == null)
+                {
+                    AdicionarLog("Relatório não retornou acesso recente.");
+                    return;
+                }
+
+                long idAcesso = ultimo.ObterIdentificador();
+
+                if (idAcesso <= 0)
+                    return;
+
+                if (idAcesso == ultimoAcessoNotificado)
+                    return;
+
+                ultimoAcessoNotificado = idAcesso;
+
+                AcessoAutomatico acesso = new AcessoAutomatico
+                {
+                    CodigoCliente = null,
+                    NomeCliente = ultimo.NomeCliente,
+                    Liberado = ultimo.Liberado,
+                    Servico = ultimo.Contrato,
+                    DataHora = ultimo.DataHora,
+                    Motivo = ultimo.Liberado
+                        ? "Acesso autorizado"
+                        : !string.IsNullOrWhiteSpace(ultimo.Motivo)
+                            ? ultimo.Motivo
+                            : "Acesso bloqueado",
+                    Mensagem = ultimo.Liberado
+                        ? "Acesso liberado"
+                        : !string.IsNullOrWhiteSpace(ultimo.Motivo)
+                            ? ultimo.Motivo
+                            : "Acesso bloqueado"
+                };
+
+                if (InvokeRequired)
+                {
+                    BeginInvoke(new Action(() =>
+                    {
+                        AdicionarLog(FormatarAcesso(acesso));
+                        MostrarNotificacao(acesso);
+                    }));
+                }
+                else
+                {
+                    AdicionarLog(FormatarAcesso(acesso));
+                    MostrarNotificacao(acesso);
+                }
+            }
+            catch (Exception ex)
+            {
+                AdicionarLog("Erro ao consultar último acesso: " + ex.Message);
+            }
+            finally
+            {
+                consultandoRelatorio = false;
+            }
+        }
+
+        private async Task ObterLoginAtualAsync()
+        {
+            ConfiguracaoApiDto configuracao = configuracaoService.ObterConfiguracao();
+
+            if (configuracao == null)
+                throw new Exception("Configuração de login não encontrada.");
+
+            if (string.IsNullOrWhiteSpace(configuracao.Email))
+                throw new Exception("E-mail da configuração não encontrado.");
+
+            if (string.IsNullOrWhiteSpace(configuracao.Senha))
+                throw new Exception("Senha da configuração não encontrada.");
+
+            await nextFitAuthService.LoginAsync(
+                configuracao.Email,
+                configuracao.Senha
+            );
+
+            if (string.IsNullOrWhiteSpace(nextFitAuthService.Token))
+                throw new Exception("Token não retornado pela API.");
+
+            if (string.IsNullOrWhiteSpace(nextFitAuthService.CodigoUnidade))
+                throw new Exception("Código da unidade não retornado pela API.");
+
+            await nextFitAuthService.AceitarTermosAsync();
+        }
+
         private void IniciarProxy()
         {
             try
@@ -299,6 +419,7 @@ namespace MonitorAcessoCatraca.Forms
                 if (proxyService != null)
                     proxyService.Parar();
 
+                ProxyWindowsService.ExecutarComandoDesativarProxy();
                 ProxyWindowsService.DesativarProxyWindows();
             }
             catch
@@ -312,21 +433,6 @@ namespace MonitorAcessoCatraca.Forms
             lblStatus.Text = "Status: parado manualmente";
 
             AdicionarLog("Monitoramento parado manualmente. Proxy do Windows desativado.");
-        }
-
-        private void ProxyService_AcessoCapturado(AcessoAutomatico acesso)
-        {
-            if (acesso == null)
-                return;
-
-            if (InvokeRequired)
-            {
-                BeginInvoke(new Action(() => ProxyService_AcessoCapturado(acesso)));
-                return;
-            }
-
-            AdicionarLog(FormatarAcesso(acesso));
-            MostrarNotificacao(acesso);
         }
 
         private string FormatarAcesso(AcessoAutomatico acesso)
@@ -375,6 +481,7 @@ namespace MonitorAcessoCatraca.Forms
                 if (proxyService != null)
                     proxyService.Parar();
 
+                ProxyWindowsService.ExecutarComandoDesativarProxy();
                 ProxyWindowsService.DesativarProxyWindows();
 
                 if (notifyIcon != null)

@@ -1,5 +1,4 @@
 using MonitorAcessoCatraca.Config;
-using MonitorAcessoCatraca.Models;
 using System;
 using System.Net;
 using System.Threading.Tasks;
@@ -13,16 +12,10 @@ namespace MonitorAcessoCatraca.Services
     {
         private ProxyServer proxyServer;
         private ExplicitProxyEndPoint explicitEndPoint;
-        private readonly AcessoAutomaticoParserService parserService;
 
         private bool iniciado = false;
 
-        public event Action<AcessoAutomatico> AcessoCapturado;
-
-        public ProxyInterceptacaoService(AcessoAutomaticoParserService parserService)
-        {
-            this.parserService = parserService;
-        }
+        public event Action AcessoAutomaticoDetectado;
 
         public void Iniciar()
         {
@@ -159,17 +152,17 @@ namespace MonitorAcessoCatraca.Services
             return Task.CompletedTask;
         }
 
-        private async Task OnBeforeResponse(object sender, SessionEventArgs e)
+        private Task OnBeforeResponse(object sender, SessionEventArgs e)
         {
             try
             {
                 if (e == null || e.HttpClient == null || e.HttpClient.Request == null)
-                    return;
+                    return Task.CompletedTask;
 
                 Uri uri = e.HttpClient.Request.RequestUri;
 
                 if (uri == null)
-                    return;
+                    return Task.CompletedTask;
 
                 bool hostCorreto = uri.Host.Equals(
                     AppConfig.HostAcesso,
@@ -177,7 +170,7 @@ namespace MonitorAcessoCatraca.Services
                 );
 
                 if (!hostCorreto)
-                    return;
+                    return Task.CompletedTask;
 
                 bool endpointCorreto = uri.AbsolutePath.IndexOf(
                     AppConfig.EndpointAcessoAutomatico,
@@ -185,24 +178,16 @@ namespace MonitorAcessoCatraca.Services
                 ) >= 0;
 
                 if (!endpointCorreto)
-                    return;
+                    return Task.CompletedTask;
 
-                string json = await e.GetResponseBodyAsString();
-
-                if (string.IsNullOrWhiteSpace(json))
-                    return;
-
-                AcessoAutomatico acesso = parserService.ConverterJsonParaAcesso(json);
-
-                if (acesso == null)
-                    return;
-
-                AcessoCapturado?.Invoke(acesso);
+                AcessoAutomaticoDetectado?.Invoke();
             }
             catch
             {
-                
+
             }
+
+            return Task.CompletedTask;
         }
     }
 }
