@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Net.Http;
+using System.IO;
 
 namespace MonitorAcessoCatraca.Forms
 {
@@ -22,7 +23,7 @@ namespace MonitorAcessoCatraca.Forms
 
         private NotifyIcon notifyIcon;
         private ContextMenuStrip menuBandeja;
-
+        private bool encerrandoAplicacao = false;
         private ProcessoService processoService;
         private ProxyInterceptacaoService proxyService;
         private RelatorioAcessoService relatorioAcessoService;
@@ -121,6 +122,8 @@ namespace MonitorAcessoCatraca.Forms
 
             ConfigurarBandeja();
 
+
+            InicializacaoWindowsService.AtivarInicializacaoComWindows();
             AdicionarLog("Monitor iniciado.");
             AdicionarLog("Aguardando Controle de Acesso abrir...");
             lblStatus.Text = "Status: aguardando Controle de Acesso...";
@@ -155,6 +158,8 @@ namespace MonitorAcessoCatraca.Forms
             ToolStripMenuItem sairItem = new ToolStripMenuItem("Sair");
             sairItem.Click += (s, e) =>
             {
+                encerrandoAplicacao = true;
+
                 try
                 {
                     if (proxyService != null)
@@ -184,7 +189,29 @@ namespace MonitorAcessoCatraca.Forms
             menuBandeja.Items.Add(sairItem);
 
             notifyIcon = new NotifyIcon();
-            notifyIcon.Icon = SystemIcons.Application;
+
+            string caminhoIcone = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory,
+                "MonitorAcessoCatraca_novo.ico"
+            );
+
+            if (!File.Exists(caminhoIcone))
+            {
+                caminhoIcone = Path.GetFullPath(Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    @"..\..\..\MonitorAcessoCatraca_novo.ico"
+                ));
+            }
+
+            if (File.Exists(caminhoIcone))
+            {
+                notifyIcon.Icon = new Icon(caminhoIcone);
+            }
+            else
+            {
+                notifyIcon.Icon = SystemIcons.Application;
+            }
+
             notifyIcon.Text = "Monitor de Acessos - Next Fit";
             notifyIcon.Visible = true;
             notifyIcon.ContextMenuStrip = menuBandeja;
@@ -234,6 +261,28 @@ namespace MonitorAcessoCatraca.Forms
 
             if (!controleAberto)
             {
+                if (proxyIniciado)
+                {
+                    AdicionarLog("Controle de Acesso foi fechado. Parando proxy...");
+
+                    try
+                    {
+                        if (proxyService != null)
+                            proxyService.Parar();
+
+                        ProxyWindowsService.ExecutarComandoDesativarProxy();
+                        ProxyWindowsService.DesativarProxyWindows();
+                    }
+                    catch
+                    {
+                    }
+
+                    proxyIniciado = false;
+
+                    btnIniciar.Enabled = true;
+                    btnParar.Enabled = false;
+                }
+
                 lblStatus.Text = "Status: Controle de Acesso não está aberto. Tentando abrir...";
 
                 string mensagem;
@@ -253,7 +302,7 @@ namespace MonitorAcessoCatraca.Forms
 
             if (!proxyIniciado)
             {
-                AdicionarLog("Controle de Acesso detectado. Iniciando interceptação...");
+                AdicionarLog("Controle de Acesso detectado. Iniciando proxy...");
                 IniciarProxy();
             }
         }
@@ -473,6 +522,24 @@ namespace MonitorAcessoCatraca.Forms
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            if (e.CloseReason == CloseReason.UserClosing && !encerrandoAplicacao)
+            {
+                e.Cancel = true;
+
+                Hide();
+                ShowInTaskbar = false;
+
+                if (notifyIcon != null)
+                {
+                    notifyIcon.BalloonTipTitle = "Monitor de Acessos";
+                    notifyIcon.BalloonTipText = "O monitor continuará rodando em segundo plano.";
+                    notifyIcon.BalloonTipIcon = ToolTipIcon.Info;
+                    notifyIcon.ShowBalloonTip(3000);
+                }
+
+                return;
+            }
+
             try
             {
                 if (timerVerificarControleAcesso != null)

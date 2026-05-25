@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Titanium.Web.Proxy;
 using Titanium.Web.Proxy.EventArguments;
 using Titanium.Web.Proxy.Models;
+using System.Security.Cryptography.X509Certificates;
+using System.IO;
 
 namespace MonitorAcessoCatraca.Services
 {
@@ -24,15 +26,30 @@ namespace MonitorAcessoCatraca.Services
 
             proxyServer = new ProxyServer();
 
+            string caminhoCertificado = ObterCaminhoCertificado();
+
+            try
+            {
+                proxyServer.CertificateManager.PfxFilePath = caminhoCertificado;
+            }
+            catch
+            {
+                // Caso a versão do Titanium não tenha PfxFilePath.
+            }
+
             proxyServer.CertificateManager.EnsureRootCertificate();
 
             try
             {
-                proxyServer.CertificateManager.TrustRootCertificate(true);
+                X509Certificate2 certificado = proxyServer.CertificateManager.RootCertificate;
+
+                if (!CertificadoEstaConfiavel(certificado))
+                {
+                    proxyServer.CertificateManager.TrustRootCertificate(false);
+                }
             }
             catch
             {
-                
             }
 
             proxyServer.BeforeResponse += OnBeforeResponse;
@@ -188,6 +205,56 @@ namespace MonitorAcessoCatraca.Services
             }
 
             return Task.CompletedTask;
+        }
+        private string ObterPastaCertificado()
+        {
+            string pasta = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Next Fit",
+                "MonitorAcessoCatraca",
+                "Certificado"
+            );
+
+            if (!Directory.Exists(pasta))
+                Directory.CreateDirectory(pasta);
+
+            return pasta;
+        }
+
+        private string ObterCaminhoCertificado()
+        {
+            return Path.Combine(ObterPastaCertificado(), "rootCert.pfx");
+        }
+
+        private bool CertificadoEstaConfiavel(X509Certificate2 certificado)
+        {
+            if (certificado == null)
+                return false;
+
+            try
+            {
+                using (X509Store store = new X509Store(StoreName.Root, StoreLocation.CurrentUser))
+                {
+                    store.Open(OpenFlags.ReadOnly);
+
+                    foreach (X509Certificate2 cert in store.Certificates)
+                    {
+                        if (
+                            cert.Thumbprint != null &&
+                            certificado.Thumbprint != null &&
+                            cert.Thumbprint.Equals(certificado.Thumbprint, StringComparison.OrdinalIgnoreCase)
+                        )
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return false;
         }
     }
 }

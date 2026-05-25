@@ -1,31 +1,54 @@
 using MonitorAcessoCatraca.Forms;
 using MonitorAcessoCatraca.Services;
 using System;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace MonitorAcessoCatraca
 {
     internal static class Program
     {
+        private static Mutex mutex;
+
         [STAThread]
         static void Main()
         {
-            ProxyWindowsService.DesativarProxyWindows();
+            bool criouNovaInstancia;
 
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
+            mutex = new Mutex(
+                true,
+                "Global\\MonitorAcessoCatraca_NextFit_Unico",
+                out criouNovaInstancia
+            );
 
-            Application.ApplicationExit += Application_ApplicationExit;
-            AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
-            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            if (!criouNovaInstancia)
+            {
+                MessageBox.Show(
+                    "O Monitor de Acesso já está em execução.",
+                    "Monitor de Acesso",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+
+                return;
+            }
 
             try
             {
+                ProxyWindowsService.DesativarProxyWindows();
+
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+
+                Application.ApplicationExit += Application_ApplicationExit;
+                AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
+                AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
                 Application.Run(new FormPrincipal());
             }
             finally
             {
-                ProxyWindowsService.DesativarProxyWindows();
+                FinalizarAplicacao();
             }
         }
 
@@ -42,6 +65,31 @@ namespace MonitorAcessoCatraca
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             ProxyWindowsService.DesativarProxyWindows();
+        }
+
+        private static void FinalizarAplicacao()
+        {
+            try
+            {
+                ProxyWindowsService.ExecutarComandoDesativarProxy();
+                ProxyWindowsService.DesativarProxyWindows();
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                if (mutex != null)
+                {
+                    mutex.ReleaseMutex();
+                    mutex.Dispose();
+                    mutex = null;
+                }
+            }
+            catch
+            {
+            }
         }
     }
 }

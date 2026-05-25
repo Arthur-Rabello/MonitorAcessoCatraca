@@ -19,6 +19,6 @@ namespace MonitorAcessoCatraca.DTOs
         public DateTime? DataHora { get; set; }
         public bool AcessoLiberado { get; set; }
         public string Motivo { get; set; }
-        public string TipoMotivo { get; set; }
+        public int? TipoMotivo { get; set; }
     }
 }

@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using MonitorAcessoCatraca.Enums;
+using MonitorAcessoCatraca.Utils;
 
 namespace MonitorAcessoCatraca.Services
 {
@@ -90,14 +92,11 @@ namespace MonitorAcessoCatraca.Services
             if (dto == null)
                 return "Motivo não informado";
 
-            if (!string.IsNullOrWhiteSpace(dto.Motivo) && !EhNumero(dto.Motivo))
+            if (!string.IsNullOrWhiteSpace(dto.Motivo))
                 return dto.Motivo;
 
-            if (!string.IsNullOrWhiteSpace(dto.TipoMotivo))
+            if (dto.TipoMotivo.HasValue)
                 return TraduzirTipoMotivo(dto.TipoMotivo);
-
-            if (!string.IsNullOrWhiteSpace(dto.Motivo))
-                return TraduzirTipoMotivo(dto.Motivo);
 
             if (dto.AcessoLiberado)
                 return "Acesso autorizado";
@@ -111,43 +110,17 @@ namespace MonitorAcessoCatraca.Services
             return int.TryParse(valor, out numero);
         }
 
-        private string TraduzirTipoMotivo(string tipoMotivo)
+        private string TraduzirTipoMotivo(int? tipoMotivo)
         {
-            if (string.IsNullOrWhiteSpace(tipoMotivo))
+            if (!tipoMotivo.HasValue)
                 return "Motivo não informado";
 
-            switch (tipoMotivo.Trim())
-            {
-                case "0":
-                    return "Manual";
+            if (!Enum.IsDefined(typeof(TipoMotivoAcessoEnum), tipoMotivo.Value))
+                return "Motivo não identificado: " + tipoMotivo.Value;
 
-                case "1":
-                    return "Cliente sem contrato ativo";
+            TipoMotivoAcessoEnum motivoEnum = (TipoMotivoAcessoEnum)tipoMotivo.Value;
 
-                case "2":
-                    return "Contrato sem modalidade";
-
-                case "3":
-                    return "Contrato sem sessão disponível";
-
-                case "4":
-                    return "Contrato sem aula no dia";
-
-                case "5":
-                    return "Contrato fora do dia permitido";
-
-                case "6":
-                    return "Contrato fora do horário permitido";
-
-                case "7":
-                    return "Contrato quantidade de acessos na semana atingido";
-
-                case "8":
-                    return "Contrato quantidade de acessos no período atingido";
-
-                default:
-                    return "Motivo não identificado: " + tipoMotivo;
-            }
+            return EnumHelper.ObterDescricao(motivoEnum);
         }
 
     }
