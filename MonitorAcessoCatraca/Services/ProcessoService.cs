@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
+
 namespace MonitorAcessoCatraca.Services
 {
     public class ProcessoService
@@ -15,6 +16,43 @@ namespace MonitorAcessoCatraca.Services
             return Process
                 .GetProcessesByName(AppConfig.NomeProcessoControleAcesso)
                 .Any();
+        }
+
+        public bool TentarAbrirControleAcessoPorTarefa(out string mensagem)
+        {
+            mensagem = "";
+
+            try
+            {
+                ProcessStartInfo startInfo = new ProcessStartInfo
+                {
+                    FileName = "schtasks.exe",
+                    Arguments = "/Run /TN \"Next Fit Controle de Acesso\"",
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+
+                using (Process processo = Process.Start(startInfo))
+                {
+                    if (processo != null)
+                        processo.WaitForExit();
+
+                    if (processo != null && processo.ExitCode == 0)
+                    {
+                        mensagem = "Solicitada abertura do Controle de Acesso pela tarefa agendada.";
+                        return true;
+                    }
+
+                    mensagem = "Não foi possível executar a tarefa agendada do Controle de Acesso.";
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                mensagem = "Erro ao executar tarefa agendada do Controle de Acesso: " + ex.Message;
+                return false;
+            }
         }
 
         public bool TentarAbrirControleAcesso(out string mensagem)

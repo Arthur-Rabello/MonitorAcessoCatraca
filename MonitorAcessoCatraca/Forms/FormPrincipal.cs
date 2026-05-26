@@ -286,14 +286,17 @@ namespace MonitorAcessoCatraca.Forms
                 lblStatus.Text = "Status: Controle de Acesso não está aberto. Tentando abrir...";
 
                 string mensagem;
-                bool abriu = processoService.TentarAbrirControleAcesso(out mensagem);
+                bool abriu = processoService.TentarAbrirControleAcessoPorTarefa(out mensagem);
 
                 AdicionarLog(mensagem);
 
                 if (!abriu)
                 {
-                    lblStatus.Text = "Status: aguardando Controle de Acesso...";
-                    return;
+                    AdicionarLog("Tentando abrir Controle de Acesso pelo método normal...");
+
+                    abriu = processoService.TentarAbrirControleAcesso(out mensagem);
+
+                    AdicionarLog(mensagem);
                 }
 
                 lblStatus.Text = "Status: aguardando inicialização do Controle de Acesso...";
