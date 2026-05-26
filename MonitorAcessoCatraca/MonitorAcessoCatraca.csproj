@@ -102,6 +102,7 @@
     <Compile Include="DTOs\AcessoAutomaticoResponseDto.cs" />
     <Compile Include="DTOs\ConfiguracaoApiDto.cs" />
     <Compile Include="DTOs\LoginResponseDto.cs" />
+    <Compile Include="DTOs\AcessoManualRequestDto.cs" />  
     <Compile Include="DTOs\AcessoRelatorioDto.cs" />
     <Compile Include="Models\AcessoRelatorio.cs" />
     <Compile Include="Models\AcessoAutomatico.cs" />
@@ -115,8 +116,14 @@
     </Compile>
     <Compile Include="Services\AcessoAutomaticoParserService.cs" />
     <Compile Include="Services\ProxyWindowsService.cs" />
-    <Compile Include="Services\ClienteLocalService.cs" />
+	<Compile Include="Services\HotkeyGlobalService.cs" />
+	<Compile Include="Services\MonitorAcessoServices.cs" />
+	<Compile Include="Services\FormPrincipalLayoutService.cs" />
+	<Compile Include="Services\FormPrincipalControles.cs" />	 
+	<Compile Include="Services\BandejaService.cs" />
+	<Compile Include="Services\ClienteLocalService.cs" />
     <Compile Include="Services\ConfiguracaoService.cs" />
+	<Compile Include="Services\AcessoManualService.cs" />  
     <Compile Include="Services\NextFitAuthService.cs" />
     <Compile Include="Services\ProcessoService.cs" />
     <Compile Include="Services\RelatorioAcessoService.cs" />

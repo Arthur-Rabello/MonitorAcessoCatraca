@@ -1,13 +1,11 @@
 using MonitorAcessoCatraca.DTOs;
+using MonitorAcessoCatraca.Enums;
 using MonitorAcessoCatraca.Models;
+using MonitorAcessoCatraca.Utils;
 using Newtonsoft.Json;
 using System;
-using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using MonitorAcessoCatraca.Enums;
-using MonitorAcessoCatraca.Utils;
 
 namespace MonitorAcessoCatraca.Services
 {
@@ -54,16 +52,15 @@ namespace MonitorAcessoCatraca.Services
             HttpResponseMessage response = await httpClient.SendAsync(request);
             string json = await response.Content.ReadAsStringAsync();
 
-
             if (!response.IsSuccessStatusCode)
                 throw new Exception("Erro ao consultar relatório. Status: " + (int)response.StatusCode + " - " + json);
 
             AcessoRelatorioDto dto = JsonConvert.DeserializeObject<AcessoRelatorioDto>(json);
 
-            if (dto == null || dto.Content == null || dto.Content.Count == 0)
+            if (dto == null)
                 return null;
 
-            AcessoRelatorioItemDto item = dto.Content.FirstOrDefault();
+            AcessoRelatorioItemDto item = dto.ObterPrimeiroContent();
 
             if (item == null)
                 return null;
@@ -71,20 +68,69 @@ namespace MonitorAcessoCatraca.Services
             return ConverterParaModel(item);
         }
 
-        private AcessoRelatorio ConverterParaModel(AcessoRelatorioItemDto dto)
+        public AcessoRelatorio ConverterParaModel(AcessoRelatorioItemDto dto)
         {
+            if (dto == null)
+                return null;
+
             string motivo = ObterMotivoTratado(dto);
 
             return new AcessoRelatorio
             {
                 Id = dto.Id,
                 CodigoContratoClienteAcesso = dto.CodigoContratoClienteAcesso,
-                NomeCliente = dto.NomeCliente,
-                Contrato = dto.DescricaoContrato,
+                NomeCliente = string.IsNullOrWhiteSpace(dto.NomeCliente)
+                    ? ObterNomeClientePadrao(dto)
+                    : dto.NomeCliente,
+                Contrato = string.IsNullOrWhiteSpace(dto.DescricaoContrato)
+                    ? ObterContratoPadrao(dto)
+                    : dto.DescricaoContrato,
                 DataHora = dto.DataHora.HasValue ? dto.DataHora.Value : DateTime.Now,
                 Liberado = dto.AcessoLiberado,
                 Motivo = motivo
             };
+        }
+
+        public AcessoAutomatico ConverterParaAcessoAutomaticoManual(AcessoRelatorioItemDto dto)
+        {
+            if (dto == null)
+                throw new Exception("API não retornou Content no acesso manual.");
+
+            if (!ValidarAcessoManual(dto))
+                throw new Exception("Resposta de acesso manual inválida. AcessoLiberado: " + dto.AcessoLiberado + " | TipoMotivo: " + dto.TipoMotivo);
+
+            return new AcessoAutomatico
+            {
+                CodigoCliente = dto.CodigoCliente,
+                NomeCliente = string.IsNullOrWhiteSpace(dto.NomeCliente)
+                    ? "Liberação manual"
+                    : dto.NomeCliente,
+                Liberado = true,
+                Servico = string.IsNullOrWhiteSpace(dto.DescricaoContrato)
+                    ? "Acesso manual"
+                    : dto.DescricaoContrato,
+                DataHora = dto.DataHora.HasValue
+                    ? dto.DataHora.Value
+                    : DateTime.Now,
+                Motivo = string.IsNullOrWhiteSpace(dto.Motivo)
+                    ? "Via Monitor de Acesso"
+                    : dto.Motivo,
+                Mensagem = "Acesso manual liberado"
+            };
+        }
+
+        public bool ValidarAcessoManual(AcessoRelatorioItemDto dto)
+        {
+            if (dto == null)
+                return false;
+
+            if (!dto.AcessoLiberado)
+                return false;
+
+            if (!dto.TipoMotivo.HasValue)
+                return false;
+
+            return dto.TipoMotivo.Value == 0;
         }
 
         private string ObterMotivoTratado(AcessoRelatorioItemDto dto)
@@ -95,6 +141,9 @@ namespace MonitorAcessoCatraca.Services
             if (!string.IsNullOrWhiteSpace(dto.Motivo))
                 return dto.Motivo;
 
+            if (EhAcessoManual(dto))
+                return "Via Monitor de Acesso";
+
             if (dto.TipoMotivo.HasValue)
                 return TraduzirTipoMotivo(dto.TipoMotivo);
 
@@ -104,10 +153,28 @@ namespace MonitorAcessoCatraca.Services
             return "Acesso bloqueado";
         }
 
-        private bool EhNumero(string valor)
+        private bool EhAcessoManual(AcessoRelatorioItemDto dto)
         {
-            int numero;
-            return int.TryParse(valor, out numero);
+            return dto != null &&
+                   dto.AcessoLiberado &&
+                   dto.TipoMotivo.HasValue &&
+                   dto.TipoMotivo.Value == 0;
+        }
+
+        private string ObterNomeClientePadrao(AcessoRelatorioItemDto dto)
+        {
+            if (EhAcessoManual(dto))
+                return "Liberação manual";
+
+            return "Cliente não informado";
+        }
+
+        private string ObterContratoPadrao(AcessoRelatorioItemDto dto)
+        {
+            if (EhAcessoManual(dto))
+                return "Acesso manual";
+
+            return "Contrato não informado";
         }
 
         private string TraduzirTipoMotivo(int? tipoMotivo)
@@ -122,6 +189,5 @@ namespace MonitorAcessoCatraca.Services
 
             return EnumHelper.ObterDescricao(motivoEnum);
         }
-
     }
 }
