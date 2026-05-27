@@ -73,16 +73,16 @@ namespace MonitorAcessoCatraca.Services
         {
             bandejaService = new BandejaService();
 
-            bandejaService.AbrirSolicitado += AbrirMonitor;
+            bandejaService._abrirSolicitado += AbrirMonitor;
 
-            bandejaService.IniciarSolicitado += () =>
+            bandejaService._iniciarSolicitado += () =>
             {
                 paradoManualmente = false;
                 IniciarMonitoramento();
             };
 
-            bandejaService.PararSolicitado += PararMonitoramento;
-            bandejaService.SairSolicitado += SairAplicacao;
+            bandejaService._pararSolicitado += PararMonitoramento;
+            bandejaService._sairSolicitado += SairAplicacao;
 
             bandejaService.Configurar();
 
@@ -442,7 +442,7 @@ namespace MonitorAcessoCatraca.Services
                 controles.BtnParar.Enabled = true;
                 controles.LblStatus.Text = "Status: monitorando comunicação do Controle de Acesso...";
 
-                AdicionarLog("Proxy iniciado na porta " + AppConfig.PortaProxy + ".");
+                AdicionarLog("Proxy iniciado na porta " + AppConfig.PORTA_PROXY + ".");
                 AdicionarLog("Aguardando requisições de AcessoAutomatico...");
 
                 if (bandejaService != null)

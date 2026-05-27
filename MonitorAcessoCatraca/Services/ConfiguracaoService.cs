@@ -10,10 +10,10 @@ namespace MonitorAcessoCatraca.Services
     {
         public ConfiguracaoApiDto ObterConfiguracao()
         {
-            if (!File.Exists(AppConfig.CaminhoBanco))
-                throw new Exception("Banco de dados não encontrado em: " + AppConfig.CaminhoBanco);
+            if (!File.Exists(AppConfig.CAMINHO_BANCO))
+                throw new Exception("Banco de dados não encontrado em: " + AppConfig.CAMINHO_BANCO);
 
-            string connectionString = "Data Source=" + AppConfig.CaminhoBanco + ";Version=3;";
+            string connectionString = "Data Source=" + AppConfig.CAMINHO_BANCO + ";Version=3;";
 
             using (SQLiteConnection conn = new SQLiteConnection(connectionString))
             {

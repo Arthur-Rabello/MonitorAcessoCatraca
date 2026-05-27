@@ -56,7 +56,7 @@ namespace MonitorAcessoCatraca.Services
 
             explicitEndPoint = new ExplicitProxyEndPoint(
                 IPAddress.Loopback,
-                AppConfig.PortaProxy,
+                AppConfig.PORTA_PROXY,
                 true
             );
 

@@ -12,12 +12,16 @@ namespace MonitorAcessoCatraca.Services
 			try
 			{
 				if (codigoCliente <= 0)
+				{
 					return "";
+				}
 
-				if (!File.Exists(AppConfig.CaminhoBanco))
+				if (!File.Exists(AppConfig.CAMINHO_BANCO))
+				{
 					return "";
+				}
 
-				string connectionString = "Data Source=" + AppConfig.CaminhoBanco + ";Version=3;";
+				string connectionString = "Data Source=" + AppConfig.CAMINHO_BANCO + ";Version=3;";
 
 				using (SQLiteConnection conn = new SQLiteConnection(connectionString))
 				{
@@ -37,7 +41,9 @@ namespace MonitorAcessoCatraca.Services
 						object result = cmd.ExecuteScalar();
 
 						if (result == null || result == DBNull.Value)
+						{
 							return "";
+						}
 
 						return result.ToString();
 					}

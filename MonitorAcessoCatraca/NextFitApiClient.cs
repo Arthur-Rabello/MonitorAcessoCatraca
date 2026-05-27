@@ -32,7 +32,9 @@ namespace MonitorAcessoCatraca
             var config = LerConfiguracaoBanco();
 
             if (config == null)
+            {
                 throw new Exception("Não foi possível ler EMAIL e SENHA da tabela CONFIGURACAO.");
+            }
 
             var url = "https://api.nextfit.com.br/api/token/";
 
@@ -51,19 +53,25 @@ namespace MonitorAcessoCatraca
             var body = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
+            {
                 throw new Exception("Erro ao realizar login na API: " + body);
+            }
 
             var json = JObject.Parse(body);
 
             _token = json["access_token"]?.ToString();
 
             if (string.IsNullOrWhiteSpace(_token))
+            {
                 throw new Exception("A API não retornou access_token.");
+            }
 
             _codigoUnidade = ExtrairCodigoUnidadeDoToken(_token);
 
             if (string.IsNullOrWhiteSpace(_codigoUnidade))
+            {
                 _codigoUnidade = "1";
+            }
 
             ConfigurarHeadersPadrao();
 
@@ -73,7 +81,9 @@ namespace MonitorAcessoCatraca
         public async Task AceitarTermosAsync()
         {
             if (string.IsNullOrWhiteSpace(_token))
+            {
                 return;
+            }
 
             var url = "https://api.nextfit.com.br/api/UsuarioTermosUso/InserirDTO";
 
@@ -85,7 +95,9 @@ namespace MonitorAcessoCatraca
         public async Task<List<AcessoRelatorio>> BuscarAcessosAsync(DateTime dataInicialLocal, DateTime dataFinalLocal, int pagina = 1, int limite = 30)
         {
             if (string.IsNullOrWhiteSpace(_token))
+            {
                 await LoginAsync();
+            }
 
             var dataInicialBrasil = new DateTimeOffset(dataInicialLocal, TimeSpan.FromHours(-3));
             var dataFinalBrasil = new DateTimeOffset(dataFinalLocal, TimeSpan.FromHours(-3));
@@ -145,7 +157,9 @@ namespace MonitorAcessoCatraca
             }
 
             if (!response.IsSuccessStatusCode)
+            {
                 throw new Exception("Erro ao consultar relatório de acessos: " + body);
+            }
 
             return ParseAcessos(body);
         }
@@ -173,17 +187,23 @@ namespace MonitorAcessoCatraca
             JToken lista = root["Content"];
 
             if (lista == null)
+            {
                 lista = root["content"];
+            }
 
             if (lista == null || lista.Type != JTokenType.Array)
+            {
                 return resultado;
+            }
 
             foreach (var item in lista)
             {
                 int codigoAcesso = LerInt(item, "CodigoContratoClienteAcesso");
 
                 if (codigoAcesso == 0)
+                {
                     codigoAcesso = LerInt(item, "Id");
+                }
 
                 var acesso = new AcessoRelatorio();
 
@@ -214,7 +234,9 @@ namespace MonitorAcessoCatraca
                     DateTime data;
 
                     if (DateTime.TryParse(dataStr, out data))
+                    {
                         acesso.DataHora = data.ToLocalTime();
+                    }
                 }
 
                 resultado.Add(acesso);
@@ -230,12 +252,16 @@ namespace MonitorAcessoCatraca
                 var token = item[nomeCampo];
 
                 if (token == null || token.Type == JTokenType.Null)
+                {
                     return 0;
+                }
 
                 int valor;
 
                 if (int.TryParse(token.ToString(), out valor))
+                {
                     return valor;
+                }
 
                 return 0;
             }
@@ -252,12 +278,16 @@ namespace MonitorAcessoCatraca
                 var token = item[nomeCampo];
 
                 if (token == null || token.Type == JTokenType.Null)
+                {
                     return null;
+                }
 
                 int valor;
 
                 if (int.TryParse(token.ToString(), out valor))
+                {
                     return valor;
+                }
 
                 return null;
             }
@@ -274,12 +304,16 @@ namespace MonitorAcessoCatraca
                 var token = item[nomeCampo];
 
                 if (token == null || token.Type == JTokenType.Null)
+                {
                     return false;
+                }
 
                 bool valor;
 
                 if (bool.TryParse(token.ToString(), out valor))
+                {
                     return valor;
+                }
 
                 return false;
             }
@@ -296,7 +330,9 @@ namespace MonitorAcessoCatraca
                 var token = item[nomeCampo];
 
                 if (token == null || token.Type == JTokenType.Null)
+                {
                     return "";
+                }
 
                 return token.ToString();
             }
@@ -336,7 +372,9 @@ namespace MonitorAcessoCatraca
                 var partes = token.Split('.');
 
                 if (partes.Length < 2)
+                {
                     return null;
+                }
 
                 string payload = partes[1];
 
@@ -360,7 +398,9 @@ namespace MonitorAcessoCatraca
                 var unidade = obj["codigoUnidadePreferencial"]?.ToString();
 
                 if (string.IsNullOrWhiteSpace(unidade))
+                {
                     unidade = obj["codigoTenant"]?.ToString();
+                }
 
                 return unidade;
             }

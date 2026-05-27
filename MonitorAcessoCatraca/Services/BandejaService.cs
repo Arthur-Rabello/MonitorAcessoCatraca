@@ -7,75 +7,75 @@ namespace MonitorAcessoCatraca.Services
 {
     public class BandejaService
     {
-        private NotifyIcon notifyIcon;
-        private ContextMenuStrip menuBandeja;
+        private NotifyIcon _notifyIcon;
+        private ContextMenuStrip _menuBandeja;
 
-        public event Action AbrirSolicitado;
-        public event Action IniciarSolicitado;
-        public event Action PararSolicitado;
-        public event Action SairSolicitado;
+        public event Action _abrirSolicitado;
+        public event Action _iniciarSolicitado;
+        public event Action _pararSolicitado;
+        public event Action _sairSolicitado;
 
         public NotifyIcon NotifyIcon
         {
-            get { return notifyIcon; }
+            get { return _notifyIcon; }
         }
 
         public void Configurar()
         {
-            menuBandeja = new ContextMenuStrip();
+            _menuBandeja = new ContextMenuStrip();
 
             ToolStripMenuItem abrirItem = new ToolStripMenuItem("Abrir monitor");
-            abrirItem.Click += (s, e) => AbrirSolicitado?.Invoke();
+            abrirItem.Click += (s, e) => _abrirSolicitado?.Invoke();
 
             ToolStripMenuItem iniciarItem = new ToolStripMenuItem("Iniciar monitoramento");
-            iniciarItem.Click += (s, e) => IniciarSolicitado?.Invoke();
+            iniciarItem.Click += (s, e) => _iniciarSolicitado?.Invoke();
 
             ToolStripMenuItem pararItem = new ToolStripMenuItem("Parar monitoramento");
-            pararItem.Click += (s, e) => PararSolicitado?.Invoke();
+            pararItem.Click += (s, e) => _pararSolicitado?.Invoke();
 
             ToolStripMenuItem sairItem = new ToolStripMenuItem("Sair");
-            sairItem.Click += (s, e) => SairSolicitado?.Invoke();
+            sairItem.Click += (s, e) => _sairSolicitado?.Invoke();
 
-            menuBandeja.Items.Add(abrirItem);
-            menuBandeja.Items.Add(new ToolStripSeparator());
-            menuBandeja.Items.Add(iniciarItem);
-            menuBandeja.Items.Add(pararItem);
-            menuBandeja.Items.Add(new ToolStripSeparator());
-            menuBandeja.Items.Add(sairItem);
+            _menuBandeja.Items.Add(abrirItem);
+            _menuBandeja.Items.Add(new ToolStripSeparator());
+            _menuBandeja.Items.Add(iniciarItem);
+            _menuBandeja.Items.Add(pararItem);
+            _menuBandeja.Items.Add(new ToolStripSeparator());
+            _menuBandeja.Items.Add(sairItem);
 
-            notifyIcon = new NotifyIcon();
-            notifyIcon.Icon = ObterIcone();
-            notifyIcon.Text = "Monitor de Acessos - Next Fit";
-            notifyIcon.Visible = true;
-            notifyIcon.ContextMenuStrip = menuBandeja;
+            _notifyIcon = new NotifyIcon();
+            _notifyIcon.Icon = ObterIcone();
+            _notifyIcon.Text = "Monitor de Acessos - Next Fit";
+            _notifyIcon.Visible = true;
+            _notifyIcon.ContextMenuStrip = _menuBandeja;
 
-            notifyIcon.DoubleClick += (s, e) => AbrirSolicitado?.Invoke();
+            _notifyIcon.DoubleClick += (s, e) => _abrirSolicitado?.Invoke();
         }
 
         public void MostrarMensagem(string titulo, string texto, ToolTipIcon icone)
         {
-            if (notifyIcon == null)
+            if (_notifyIcon == null)
                 return;
 
-            notifyIcon.BalloonTipTitle = titulo;
-            notifyIcon.BalloonTipText = texto;
-            notifyIcon.BalloonTipIcon = icone;
-            notifyIcon.ShowBalloonTip(3000);
+            _notifyIcon.BalloonTipTitle = titulo;
+            _notifyIcon.BalloonTipText = texto;
+            _notifyIcon.BalloonTipIcon = icone;
+            _notifyIcon.ShowBalloonTip(3000);
         }
 
         public void Dispose()
         {
-            if (notifyIcon != null)
+            if (_notifyIcon != null)
             {
-                notifyIcon.Visible = false;
-                notifyIcon.Dispose();
-                notifyIcon = null;
+                _notifyIcon.Visible = false;
+                _notifyIcon.Dispose();
+                _notifyIcon = null;
             }
 
-            if (menuBandeja != null)
+            if (_menuBandeja != null)
             {
-                menuBandeja.Dispose();
-                menuBandeja = null;
+                _menuBandeja.Dispose();
+                _menuBandeja = null;
             }
         }
 

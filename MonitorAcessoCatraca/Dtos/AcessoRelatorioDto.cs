@@ -17,17 +17,23 @@ namespace MonitorAcessoCatraca.DTOs
         public List<AcessoRelatorioItemDto> ObterListaContent()
         {
             if (Content == null)
+            {
                 return new List<AcessoRelatorioItemDto>();
+            }
 
             if (Content.Type == JTokenType.Array)
+            {
                 return Content.ToObject<List<AcessoRelatorioItemDto>>();
+            }
 
             if (Content.Type == JTokenType.Object)
             {
                 AcessoRelatorioItemDto item = Content.ToObject<AcessoRelatorioItemDto>();
 
                 if (item != null)
+                {
                     return new List<AcessoRelatorioItemDto> { item };
+                }
             }
 
             return new List<AcessoRelatorioItemDto>();
@@ -38,7 +44,9 @@ namespace MonitorAcessoCatraca.DTOs
             List<AcessoRelatorioItemDto> lista = ObterListaContent();
 
             if (lista == null || lista.Count == 0)
+            {
                 return null;
+            }
 
             return lista[0];
         }

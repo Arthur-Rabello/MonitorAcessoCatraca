@@ -14,7 +14,7 @@ namespace MonitorAcessoCatraca.Services
         public bool ControleAcessoEstaAberto()
         {
             return Process
-                .GetProcessesByName(AppConfig.NomeProcessoControleAcesso)
+                .GetProcessesByName(AppConfig.NOME_PROCESSO_CONTROLE_ACESSO)
                 .Any();
         }
 
@@ -74,8 +74,8 @@ namespace MonitorAcessoCatraca.Services
                 }
 
                 string caminhoExe = Path.Combine(
-                    AppConfig.PastaControleAcesso,
-                    AppConfig.NomeExecutavelControleAcesso
+                    AppConfig.PASTA_CONTROLE_ACESSO,
+                    AppConfig.NOME_EXECUTAVEL_CONTROLE_ACESSO
                 );
 
                 if (!File.Exists(caminhoExe))
@@ -87,7 +87,7 @@ namespace MonitorAcessoCatraca.Services
                 ProcessStartInfo startInfo = new ProcessStartInfo
                 {
                     FileName = caminhoExe,
-                    WorkingDirectory = AppConfig.PastaControleAcesso,
+                    WorkingDirectory = AppConfig.PASTA_CONTROLE_ACESSO,
                     UseShellExecute = true
                 };
 

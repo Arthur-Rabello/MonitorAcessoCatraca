@@ -41,18 +41,24 @@ namespace MonitorAcessoCatraca.Services
             var body = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
+            {
                 throw new Exception("Erro ao realizar login na API: " + body);
+            }
 
             var login = JsonConvert.DeserializeObject<LoginResponseDto>(body);
 
             if (login == null || string.IsNullOrWhiteSpace(login.AccessToken))
+            {
                 throw new Exception("A API não retornou access_token.");
+            }
 
             Token = login.AccessToken;
             CodigoUnidade = JwtHelper.ExtrairCodigoUnidade(Token);
 
             if (string.IsNullOrWhiteSpace(CodigoUnidade))
+            {
                 CodigoUnidade = "1";
+            }
 
             ConfigurarHeadersPadrao();
         }
@@ -60,7 +66,9 @@ namespace MonitorAcessoCatraca.Services
         public async Task AceitarTermosAsync()
         {
             if (string.IsNullOrWhiteSpace(Token))
+            {
                 return;
+            }
 
             var url = "https://api.nextfit.com.br/api/UsuarioTermosUso/InserirDTO";
             var jsonVazio = new StringContent("{}", Encoding.UTF8, "application/json");

@@ -11,12 +11,16 @@ namespace MonitorAcessoCatraca.Utils
                 JToken token = item[campo];
 
                 if (token == null || token.Type == JTokenType.Null)
+                {
                     return 0;
+                }
 
                 int valor;
 
                 if (int.TryParse(token.ToString(), out valor))
+                {
                     return valor;
+                }
 
                 return 0;
             }
@@ -33,12 +37,16 @@ namespace MonitorAcessoCatraca.Utils
                 JToken token = item[campo];
 
                 if (token == null || token.Type == JTokenType.Null)
+                {
                     return null;
+                }
 
                 int valor;
 
                 if (int.TryParse(token.ToString(), out valor))
+                {
                     return valor;
+                }
 
                 return null;
             }
@@ -55,12 +63,16 @@ namespace MonitorAcessoCatraca.Utils
                 JToken token = item[campo];
 
                 if (token == null || token.Type == JTokenType.Null)
+                {
                     return false;
+                }
 
                 bool valor;
 
                 if (bool.TryParse(token.ToString(), out valor))
+                {
                     return valor;
+                }
 
                 return false;
             }
@@ -77,7 +89,9 @@ namespace MonitorAcessoCatraca.Utils
                 JToken token = item[campo];
 
                 if (token == null || token.Type == JTokenType.Null)
+                {
                     return "";
+                }
 
                 return token.ToString();
             }

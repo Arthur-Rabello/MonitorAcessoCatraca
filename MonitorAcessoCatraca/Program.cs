@@ -8,14 +8,14 @@ namespace MonitorAcessoCatraca
 {
     internal static class Program
     {
-        private static Mutex mutex;
+        private static Mutex _mutex;
 
         [STAThread]
         static void Main()
         {
             bool criouNovaInstancia;
 
-            mutex = new Mutex(
+            _mutex = new Mutex(
                 true,
                 "Global\\MonitorAcessoCatraca_NextFit_Unico",
                 out criouNovaInstancia
@@ -80,11 +80,11 @@ namespace MonitorAcessoCatraca
 
             try
             {
-                if (mutex != null)
+                if (_mutex != null)
                 {
-                    mutex.ReleaseMutex();
-                    mutex.Dispose();
-                    mutex = null;
+                    _mutex.ReleaseMutex();
+                    _mutex.Dispose();
+                    _mutex = null;
                 }
             }
             catch

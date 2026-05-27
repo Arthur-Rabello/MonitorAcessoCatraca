@@ -13,9 +13,9 @@ namespace MonitorAcessoCatraca.Services
         private const uint MOD_SHIFT = 0x0004;
         private const uint MOD_NOREPEAT = 0x4000;
 
-        private readonly int id;
-        private readonly uint modificadores;
-        private readonly Keys tecla;
+        private readonly int _id;
+        private readonly uint _modificadores;
+        private readonly Keys _tecla;
 
         private bool registrado = false;
 
@@ -29,19 +29,23 @@ namespace MonitorAcessoCatraca.Services
 
         public HotkeyGlobalService(int id, Keys tecla, bool ctrl, bool alt, bool shift)
         {
-            this.id = id;
-            this.tecla = tecla;
+            this._id = id;
+            this._tecla = tecla;
 
-            modificadores = MOD_NOREPEAT;
+            _modificadores = MOD_NOREPEAT;
 
             if (ctrl)
-                modificadores |= MOD_CONTROL;
-
+            {
+                _modificadores |= MOD_CONTROL;
+            }
             if (alt)
-                modificadores |= MOD_ALT;
-
+            {
+                _modificadores |= MOD_ALT;
+            }
             if (shift)
-                modificadores |= MOD_SHIFT;
+            {
+                _modificadores |= MOD_SHIFT;
+            }
         }
 
         public bool Registrar(IntPtr handle, out int erroWindows)
@@ -49,13 +53,15 @@ namespace MonitorAcessoCatraca.Services
             erroWindows = 0;
 
             if (registrado)
+            {
                 return true;
+            }
 
             bool sucesso = RegisterHotKey(
                 handle,
-                id,
-                modificadores,
-                (uint)tecla
+                _id,
+                _modificadores,
+                (uint)_tecla
             );
 
             if (sucesso)
@@ -71,11 +77,12 @@ namespace MonitorAcessoCatraca.Services
         public void Desregistrar(IntPtr handle)
         {
             if (!registrado)
+            {
                 return;
-
+            }
             try
             {
-                UnregisterHotKey(handle, id);
+                UnregisterHotKey(handle, _id);
             }
             catch
             {
@@ -87,13 +94,16 @@ namespace MonitorAcessoCatraca.Services
         public bool ProcessarMensagem(Message mensagem)
         {
             if (mensagem.Msg != WM_HOTKEY)
+            {
                 return false;
+            }
 
             int idMensagem = mensagem.WParam.ToInt32();
 
-            if (idMensagem != id)
+            if (idMensagem != _id)
+            {
                 return false;
-
+            }
             AtalhoPressionado?.Invoke();
             return true;
         }
@@ -102,16 +112,19 @@ namespace MonitorAcessoCatraca.Services
         {
             string texto = "";
 
-            if ((modificadores & MOD_CONTROL) == MOD_CONTROL)
+            if ((_modificadores & MOD_CONTROL) == MOD_CONTROL)
+            {
                 texto += "Ctrl + ";
-
-            if ((modificadores & MOD_ALT) == MOD_ALT)
+            }
+            if ((_modificadores & MOD_ALT) == MOD_ALT)
+            {
                 texto += "Alt + ";
-
-            if ((modificadores & MOD_SHIFT) == MOD_SHIFT)
+            }
+            if ((_modificadores & MOD_SHIFT) == MOD_SHIFT)
+            {
                 texto += "Shift + ";
-
-            texto += tecla.ToString();
+            }
+            texto += _tecla.ToString();
 
             return texto;
         }

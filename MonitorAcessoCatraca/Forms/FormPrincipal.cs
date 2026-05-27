@@ -6,35 +6,35 @@ namespace MonitorAcessoCatraca.Forms
 {
     public class FormPrincipal : Form
     {
-        private MonitorAcessoService monitorAcessoService;
+        private MonitorAcessoService _monitorAcessoService;
 
         public FormPrincipal()
         {
-            monitorAcessoService = new MonitorAcessoService(this);
-            monitorAcessoService.Inicializar();
+            _monitorAcessoService = new MonitorAcessoService(this);
+            _monitorAcessoService.Inicializar();
         }
 
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
-            monitorAcessoService.AoExibirTela();
+            _monitorAcessoService.AoExibirTela();
         }
 
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
-            monitorAcessoService.AoCriarHandle();
+            _monitorAcessoService.AoCriarHandle();
         }
 
         protected override void OnHandleDestroyed(EventArgs e)
         {
-            monitorAcessoService.AoDestruirHandle();
+            _monitorAcessoService.AoDestruirHandle();
             base.OnHandleDestroyed(e);
         }
 
         protected override void WndProc(ref Message m)
         {
-            if (monitorAcessoService != null && monitorAcessoService.ProcessarMensagemWindows(m))
+            if (_monitorAcessoService != null && _monitorAcessoService.ProcessarMensagemWindows(m))
                 return;
 
             base.WndProc(ref m);
@@ -42,7 +42,7 @@ namespace MonitorAcessoCatraca.Forms
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            monitorAcessoService.AoFecharFormulario(e);
+            _monitorAcessoService.AoFecharFormulario(e);
 
             if (!e.Cancel)
                 base.OnFormClosing(e);

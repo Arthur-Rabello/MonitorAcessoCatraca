@@ -12,11 +12,11 @@ namespace MonitorAcessoCatraca.Services
 {
     public class AcessoManualService
     {
-        private readonly HttpClient httpClient;
+        private readonly HttpClient _httpClient;
 
         public AcessoManualService()
         {
-            httpClient = new HttpClient();
+            _httpClient = new HttpClient();
         }
 
         public async Task<bool> LiberarAcessoManualAsync(string token)
@@ -45,7 +45,7 @@ namespace MonitorAcessoCatraca.Services
             request.Headers.TryAddWithoutValidation("Accept", "application/json");
 
 
-            HttpResponseMessage response = await httpClient.SendAsync(request);
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
 
             string resposta = await response.Content.ReadAsStringAsync();
 

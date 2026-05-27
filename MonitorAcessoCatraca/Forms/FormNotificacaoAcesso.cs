@@ -7,7 +7,7 @@ namespace MonitorAcessoCatraca.Forms
 {
     public class FormNotificacaoAcesso : Form
     {
-        private Timer timerFechar;
+        private Timer _timerFechar;
 
         public FormNotificacaoAcesso(AcessoAutomatico acesso)
         {
@@ -116,15 +116,15 @@ namespace MonitorAcessoCatraca.Forms
 
             Controls.Add(btnFechar);
 
-            timerFechar = new Timer();
-            timerFechar.Interval = 7000;
-            timerFechar.Tick += TimerFechar_Tick;
-            timerFechar.Start();
+            _timerFechar = new Timer();
+            _timerFechar.Interval = 7000;
+            _timerFechar.Tick += TimerFechar_Tick;
+            _timerFechar.Start();
         }
 
         private void TimerFechar_Tick(object sender, EventArgs e)
         {
-            timerFechar.Stop();
+            _timerFechar.Stop();
             Close();
         }
     }

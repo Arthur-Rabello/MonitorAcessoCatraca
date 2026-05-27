@@ -27,13 +27,17 @@ namespace MonitorAcessoCatraca.Models
             get
             {
                 if (!string.IsNullOrWhiteSpace(Motivo))
+                {
                     return Motivo;
-
+                }
                 if (!string.IsNullOrWhiteSpace(Mensagem))
+                {
                     return Mensagem;
-
+                }
                 if (Liberado)
+                {
                     return "Acesso autorizado.";
+                }
 
                 return "Acesso não autorizado.";
             }
@@ -44,7 +48,9 @@ namespace MonitorAcessoCatraca.Models
             get
             {
                 if (string.IsNullOrWhiteSpace(Servico))
+                {
                     return "Não informado";
+                }
 
                 return Servico;
             }
