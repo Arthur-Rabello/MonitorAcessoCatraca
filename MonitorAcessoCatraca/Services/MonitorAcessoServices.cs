@@ -12,11 +12,9 @@ namespace MonitorAcessoCatraca.Services
     public class MonitorAcessoService
     {
         private readonly FormPrincipal form;
-
         private FormPrincipalControles controles;
 
         private ProcessoService processoService;
-        private ProxyInterceptacaoService proxyService;
         private RelatorioAcessoService relatorioAcessoService;
         private ConfiguracaoService configuracaoService;
         private NextFitAuthService nextFitAuthService;
@@ -25,10 +23,15 @@ namespace MonitorAcessoCatraca.Services
         private HotkeyGlobalService hotkeyService;
         private FormPrincipalLayoutService layoutService;
 
+        private Timer timerConsultaRelatorio;
+
         private const int HOTKEY_LIBERAR_ACESSO = 0;
 
+        // Define o intervalo da leitura: 60000 ms (1 min) ou 180000 ms (3 min)
+        private const int INTERVALO_CONSULTA_MS = 30000;
+
         private bool encerrandoAplicacao = false;
-        private bool proxyIniciado = false;
+        private bool monitoramentoIniciado = false;
         private bool paradoManualmente = false;
         private bool consultandoRelatorio = false;
         private bool liberandoAcessoManual = false;
@@ -51,8 +54,12 @@ namespace MonitorAcessoCatraca.Services
             configuracaoService = new ConfiguracaoService();
             nextFitAuthService = new NextFitAuthService(new HttpClient());
 
-            proxyService = new ProxyInterceptacaoService();
-            proxyService.AcessoAutomaticoDetectado += ProxyService_AcessoAutomaticoDetectado;
+            // Configuração do Timer para leitura periódica de relatórios
+            timerConsultaRelatorio = new Timer
+            {
+                Interval = INTERVALO_CONSULTA_MS
+            };
+            timerConsultaRelatorio.Tick += TimerConsultaRelatorio_Tick;
 
             controles.BtnIniciar.Click += BtnIniciar_Click;
             controles.BtnParar.Click += BtnParar_Click;
@@ -220,7 +227,8 @@ namespace MonitorAcessoCatraca.Services
                 await ObterLoginAtualAsync();
 
                 await acessoManualService.LiberarAcessoManualAsync(
-                    nextFitAuthService.Token
+                    nextFitAuthService.Token,
+                    nextFitAuthService.CodigoUnidade
                 );
 
                 AcessoAutomatico acessoManual = new AcessoAutomatico
@@ -277,23 +285,14 @@ namespace MonitorAcessoCatraca.Services
 
             if (!controleAberto)
             {
-                if (proxyIniciado)
+                if (monitoramentoIniciado)
                 {
-                    AdicionarLog("Controle de Acesso foi fechado. Parando monitoramento...");
+                    AdicionarLog("Controle de Acesso foi fechado. Parando leitura periódica...");
 
-                    try
-                    {
-                        if (proxyService != null)
-                            proxyService.Parar();
+                    if (timerConsultaRelatorio != null)
+                        timerConsultaRelatorio.Stop();
 
-                        ProxyWindowsService.ExecutarComandoDesativarProxy();
-                        ProxyWindowsService.DesativarProxyWindows();
-                    }
-                    catch
-                    {
-                    }
-
-                    proxyIniciado = false;
+                    monitoramentoIniciado = false;
 
                     controles.BtnIniciar.Enabled = true;
                     controles.BtnParar.Enabled = false;
@@ -319,14 +318,19 @@ namespace MonitorAcessoCatraca.Services
                 return;
             }
 
-            if (!proxyIniciado)
+            if (!monitoramentoIniciado)
             {
-                AdicionarLog("Controle de Acesso detectado. Iniciando monitoramento...");
+                AdicionarLog("Controle de Acesso detectado. Iniciando leitura de relatórios...");
                 IniciarMonitoramento();
             }
         }
 
-        private async void ProxyService_AcessoAutomaticoDetectado()
+        private async void TimerConsultaRelatorio_Tick(object sender, EventArgs e)
+        {
+            await ConsultarRelatorioAcessoAsync();
+        }
+
+        private async Task ConsultarRelatorioAcessoAsync()
         {
             if (consultandoRelatorio)
                 return;
@@ -335,14 +339,9 @@ namespace MonitorAcessoCatraca.Services
 
             try
             {
-                AdicionarLog("AcessoAutomatico detectado. Consultando último acesso no relatório...");
-
-                await Task.Delay(1500);
-
                 await ObterLoginAtualAsync();
 
                 int codigoUnidade;
-
                 if (!int.TryParse(nextFitAuthService.CodigoUnidade, out codigoUnidade))
                     throw new Exception("Código da unidade inválido: " + nextFitAuthService.CodigoUnidade);
 
@@ -352,17 +351,11 @@ namespace MonitorAcessoCatraca.Services
                 );
 
                 if (ultimo == null)
-                {
-                    AdicionarLog("Relatório não retornou acesso recente.");
                     return;
-                }
 
                 long idAcesso = ultimo.ObterIdentificador();
 
-                if (idAcesso <= 0)
-                    return;
-
-                if (idAcesso == ultimoAcessoNotificado)
+                if (idAcesso <= 0 || idAcesso == ultimoAcessoNotificado)
                     return;
 
                 ultimoAcessoNotificado = idAcesso;
@@ -391,7 +384,7 @@ namespace MonitorAcessoCatraca.Services
             }
             catch (Exception ex)
             {
-                AdicionarLog("Erro ao consultar último acesso: " + ex.Message);
+                AdicionarLog("Erro ao consultar relatório de acessos: " + ex.Message);
             }
             finally
             {
@@ -430,33 +423,34 @@ namespace MonitorAcessoCatraca.Services
         {
             try
             {
-                if (proxyIniciado)
+                if (monitoramentoIniciado)
                     return;
 
-                proxyService.Iniciar();
-
-                proxyIniciado = true;
+                timerConsultaRelatorio.Start();
+                monitoramentoIniciado = true;
                 paradoManualmente = false;
 
                 controles.BtnIniciar.Enabled = false;
                 controles.BtnParar.Enabled = true;
-                controles.LblStatus.Text = "Status: monitorando comunicação do Controle de Acesso...";
+                controles.LblStatus.Text = "Status: lendo relatórios de acesso periodicamente...";
 
-                AdicionarLog("Proxy iniciado na porta " + AppConfig.PORTA_PROXY + ".");
-                AdicionarLog("Aguardando requisições de AcessoAutomatico...");
+                AdicionarLog("Leitura de relatório iniciada (intervalo: " + (INTERVALO_CONSULTA_MS / 1000) + "s).");
+
+                // Executa a primeira consulta imediatamente ao iniciar
+                _ = ConsultarRelatorioAcessoAsync();
 
                 if (bandejaService != null)
                 {
                     bandejaService.MostrarMensagem(
                         "Monitor de Acessos",
-                        "Monitoramento iniciado.",
+                        "Monitoramento por relatório iniciado.",
                         ToolTipIcon.Info
                     );
                 }
             }
             catch (Exception ex)
             {
-                proxyIniciado = false;
+                monitoramentoIniciado = false;
                 controles.LblStatus.Text = "Status: erro ao iniciar monitoramento";
                 AdicionarLog("ERRO ao iniciar monitoramento: " + ex.Message);
 
@@ -475,23 +469,20 @@ namespace MonitorAcessoCatraca.Services
 
             try
             {
-                if (proxyService != null)
-                    proxyService.Parar();
-
-                ProxyWindowsService.ExecutarComandoDesativarProxy();
-                ProxyWindowsService.DesativarProxyWindows();
+                if (timerConsultaRelatorio != null)
+                    timerConsultaRelatorio.Stop();
             }
             catch
             {
             }
 
-            proxyIniciado = false;
+            monitoramentoIniciado = false;
 
             controles.BtnIniciar.Enabled = true;
             controles.BtnParar.Enabled = false;
             controles.LblStatus.Text = "Status: parado manualmente";
 
-            AdicionarLog("Monitoramento parado manualmente. Proxy do Windows desativado.");
+            AdicionarLog("Monitoramento periódico parado manualmente.");
         }
 
         private string FormatarAcesso(AcessoAutomatico acesso)
@@ -561,11 +552,8 @@ namespace MonitorAcessoCatraca.Services
                 if (controles != null && controles.TimerVerificarControleAcesso != null)
                     controles.TimerVerificarControleAcesso.Stop();
 
-                if (proxyService != null)
-                    proxyService.Parar();
-
-                ProxyWindowsService.ExecutarComandoDesativarProxy();
-                ProxyWindowsService.DesativarProxyWindows();
+                if (timerConsultaRelatorio != null)
+                    timerConsultaRelatorio.Stop();
 
                 if (bandejaService != null)
                     bandejaService.Dispose();

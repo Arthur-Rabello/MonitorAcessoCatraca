@@ -14,6 +14,8 @@ namespace MonitorAcessoCatraca.Services
     {
         private readonly HttpClient _http;
 
+        private const string UserAgentSecreto = "Controle de acesso - Next Fit - v1.9";
+
         public string Token { get; private set; }
         public string CodigoUnidade { get; private set; }
 
@@ -35,7 +37,8 @@ namespace MonitorAcessoCatraca.Services
 
             var request = new HttpRequestMessage(HttpMethod.Post, url);
             request.Content = form;
-            request.Headers.Add("Front-Version", "1.1.5");
+
+            request.Headers.TryAddWithoutValidation("User-Agent", UserAgentSecreto);
 
             var response = await _http.SendAsync(request);
             var body = await response.Content.ReadAsStringAsync();
@@ -53,6 +56,7 @@ namespace MonitorAcessoCatraca.Services
             }
 
             Token = login.AccessToken;
+
             CodigoUnidade = JwtHelper.ExtrairCodigoUnidade(Token);
 
             if (string.IsNullOrWhiteSpace(CodigoUnidade))
@@ -71,11 +75,16 @@ namespace MonitorAcessoCatraca.Services
             }
 
             var url = "https://api.nextfit.com.br/api/UsuarioTermosUso/InserirDTO";
-            var jsonVazio = new StringContent("{}", Encoding.UTF8, "application/json");
+
+            var body = new StringContent(
+                "{\"Origem\":1}",
+                Encoding.UTF8,
+                "application/json"
+            );
 
             try
             {
-                await _http.PostAsync(url, jsonVazio);
+                await _http.PostAsync(url, body);
             }
             catch
             {
@@ -87,11 +96,8 @@ namespace MonitorAcessoCatraca.Services
             _http.DefaultRequestHeaders.Clear();
 
             _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Token);
-            _http.DefaultRequestHeaders.Add("Codigo-Unidade", CodigoUnidade);
-            _http.DefaultRequestHeaders.Add("Front-Version", "1.1.5");
-            _http.DefaultRequestHeaders.Add("Origin", "https://app.nextfit.com.br");
-            _http.DefaultRequestHeaders.Add("Referer", "https://app.nextfit.com.br/");
-            _http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+            _http.DefaultRequestHeaders.TryAddWithoutValidation("Codigo-Unidade", CodigoUnidade);
+            _http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgentSecreto);
             _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
     }

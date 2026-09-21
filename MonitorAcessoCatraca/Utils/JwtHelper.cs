@@ -11,25 +11,26 @@ namespace MonitorAcessoCatraca.Utils
             try
             {
                 if (string.IsNullOrWhiteSpace(token))
-                    return null;
+                {
+                    return "";
+                }
 
-                var partes = token.Split('.');
+                string[] partes = token.Split('.');
 
                 if (partes.Length < 2)
-                    return null;
+                {
+                    return "";
+                }
 
                 string payload = partes[1];
 
                 payload = payload.Replace('-', '+').Replace('_', '/');
 
-                switch (payload.Length % 4)
+                int resto = payload.Length % 4;
+
+                if (resto > 0)
                 {
-                    case 2:
-                        payload += "==";
-                        break;
-                    case 3:
-                        payload += "=";
-                        break;
+                    payload = payload.PadRight(payload.Length + (4 - resto), '=');
                 }
 
                 byte[] bytes = Convert.FromBase64String(payload);
@@ -37,19 +38,18 @@ namespace MonitorAcessoCatraca.Utils
 
                 JObject obj = JObject.Parse(json);
 
-                string unidade = null;
+                string codigoUnidade =
+                    obj["codigoTenant"] != null ? obj["codigoTenant"].ToString() :
+                    obj["codigoUnidadePreferencial"] != null ? obj["codigoUnidadePreferencial"].ToString() :
+                    obj["codigoUnidade"] != null ? obj["codigoUnidade"].ToString() :
+                    obj["CodigoUnidade"] != null ? obj["CodigoUnidade"].ToString() :
+                    "";
 
-                if (obj["codigoUnidadePreferencial"] != null)
-                    unidade = obj["codigoUnidadePreferencial"].ToString();
-
-                if (string.IsNullOrWhiteSpace(unidade) && obj["codigoTenant"] != null)
-                    unidade = obj["codigoTenant"].ToString();
-
-                return unidade;
+                return codigoUnidade;
             }
             catch
             {
-                return null;
+                return "";
             }
         }
     }

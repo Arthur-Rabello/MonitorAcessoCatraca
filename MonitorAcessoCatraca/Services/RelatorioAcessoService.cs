@@ -18,10 +18,16 @@ namespace MonitorAcessoCatraca.Services
             httpClient = new HttpClient();
         }
 
-        public async Task<AcessoRelatorio> BuscarUltimoAcessoAsync(string token, int codigoUnidade)
+        /// <summary>
+        /// Busca o último acesso registrado na API dentro de uma janela de tempo definida em minutos.
+        /// </summary>
+        /// <param name="token">Token de autenticação Bearer</param>
+        /// <param name="codigoUnidade">Código da unidade</param>
+        /// <param name="minutosAtras">Janela de tempo de consulta (Ex: 1 a 3 minutos)</param>
+        public async Task<AcessoRelatorio> BuscarUltimoAcessoAsync(string token, int codigoUnidade, int minutosAtras = 3)
         {
-            DateTime dataFinal = DateTime.UtcNow.AddMinutes(2);
-            DateTime dataInicial = DateTime.UtcNow.AddMinutes(-10);
+            DateTime dataFinal = DateTime.UtcNow.AddMinutes(1);
+            DateTime dataInicial = DateTime.UtcNow.AddMinutes(-Math.Abs(minutosAtras));
 
             string fields = "[\"Id\",\"CodigoContratoClienteAcesso\",\"AcessoLiberado\",\"NomeCliente\",\"DescricaoContrato\",\"DataHora\",\"Motivo\",\"TipoMotivo\"]";
             string includes = "[]";

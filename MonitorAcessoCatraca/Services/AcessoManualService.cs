@@ -1,8 +1,9 @@
 using MonitorAcessoCatraca.Config;
 using MonitorAcessoCatraca.DTOs;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
+using System.Data.SQLite;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -19,37 +20,61 @@ namespace MonitorAcessoCatraca.Services
             _httpClient = new HttpClient();
         }
 
-        public async Task<bool> LiberarAcessoManualAsync(string token)
+        public async Task<bool> LiberarAcessoManualAsync(string token, string codigoUnidade)
         {
             if (string.IsNullOrWhiteSpace(token))
                 throw new Exception("Token não informado para liberação manual.");
 
-            string url =
-                "https://" +
-                AppConfig.HostAcesso +
-                "/api/v1/ContratoClienteAcesso/AcessoManual";
+            var equipamento = ObterEquipamentoAtivoBanco();
+
+            if (!equipamento.HasValue)
+            {
+                throw new Exception("Nenhum equipamento ativo encontrado no banco.db3.");
+            }
+
+            int idEquipamento = equipamento.Value.Id;
+            string descricaoEquipamento = string.IsNullOrWhiteSpace(equipamento.Value.Descricao)
+                ? "Catraca"
+                : equipamento.Value.Descricao;
+
+            string url = "https://api.nextfit.com.br/api/ControleAcesso/LiberarEntrada";
+
+            EquipamentoDto equipamentoDto = new EquipamentoDto
+            {
+                Id = idEquipamento,
+                Descricao = descricaoEquipamento,
+                Offline = false,
+                Value = idEquipamento,
+                Label = descricaoEquipamento
+            };
 
             AcessoManualRequestDto body = new AcessoManualRequestDto
             {
                 CodigoCliente = null,
-                Motivo = "Via Monitor de Acesso"
+                CodigoEquipamento = idEquipamento,
+                TemEquipamentos = true,
+                Equipamentos = new List<EquipamentoDto> { equipamentoDto },
+                Equipamento = equipamentoDto
             };
 
             string jsonEnvio = JsonConvert.SerializeObject(body);
 
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Content = new StringContent(jsonEnvio, Encoding.UTF8, "application/json");
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new StringContent(jsonEnvio, Encoding.UTF8, "application/json")
+            };
 
-            request.Headers.TryAddWithoutValidation("User-Agent", "Controle de acesso - Next Fit - v1.10");
             request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + token);
+            if (!string.IsNullOrWhiteSpace(codigoUnidade))
+            {
+                request.Headers.TryAddWithoutValidation("codigo-unidade", codigoUnidade);
+            }
+            request.Headers.TryAddWithoutValidation("front-version", "1.1.5");
             request.Headers.TryAddWithoutValidation("Accept", "application/json");
 
-
             HttpResponseMessage response = await _httpClient.SendAsync(request);
-
             string resposta = await response.Content.ReadAsStringAsync();
 
-          
             if (!response.IsSuccessStatusCode)
             {
                 throw new Exception(
@@ -60,66 +85,58 @@ namespace MonitorAcessoCatraca.Services
                 );
             }
 
-            ValidarRespostaApi(resposta);
-
             return true;
         }
 
-        private void ValidarRespostaApi(string resposta)
+        private (int Id, string Descricao)? ObterEquipamentoAtivoBanco()
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(resposta))
-                    throw new Exception("API retornou resposta vazia.");
+                string caminhoBanco = AppConfig.CAMINHO_BANCO;
 
-                JObject obj = JObject.Parse(resposta);
+                if (!File.Exists(caminhoBanco))
+                    return null;
 
-                bool success = obj["Success"] != null && obj["Success"].Value<bool>();
-
-                if (!success)
+                using (var conn = new SQLiteConnection("Data Source=" + caminhoBanco + ";Version=3;Read Only=True;"))
                 {
-                    string mensagem = obj["Message"] != null
-                        ? obj["Message"].ToString()
-                        : "API retornou Success=false.";
+                    conn.Open();
 
-                    throw new Exception("Liberação manual não confirmada pela API: " + mensagem);
-                }
-
-                JToken content = obj["Content"];
-
-                if (content != null && content["AcessoLiberado"] != null)
-                {
-                    bool acessoLiberado = content["AcessoLiberado"].Value<bool>();
-
-                    if (!acessoLiberado)
+                    // 1. Busca equipamento padrão e ativo
+                    using (var cmd = new SQLiteCommand("SELECT IDEQUIPAMENTO, DESCRICAO FROM EQUIPAMENTO WHERE PADRAO = 1 AND INATIVO = 0 LIMIT 1", conn))
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        throw new Exception("API respondeu, mas AcessoLiberado veio false.");
+                        if (reader.Read())
+                        {
+                            return (Convert.ToInt32(reader["IDEQUIPAMENTO"]), reader["DESCRICAO"]?.ToString());
+                        }
+                    }
+
+                    // 2. Fallback: busca qualquer equipamento ativo
+                    using (var cmd = new SQLiteCommand("SELECT IDEQUIPAMENTO, DESCRICAO FROM EQUIPAMENTO WHERE INATIVO = 0 LIMIT 1", conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return (Convert.ToInt32(reader["IDEQUIPAMENTO"]), reader["DESCRICAO"]?.ToString());
+                        }
+                    }
+
+                    // 3. Fallback: primeiro equipamento cadastrado
+                    using (var cmd = new SQLiteCommand("SELECT IDEQUIPAMENTO, DESCRICAO FROM EQUIPAMENTO LIMIT 1", conn))
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return (Convert.ToInt32(reader["IDEQUIPAMENTO"]), reader["DESCRICAO"]?.ToString());
+                        }
                     }
                 }
             }
-            catch (JsonReaderException)
+            catch
             {
-                throw new Exception("Não foi possível interpretar a resposta da API: " + resposta);
             }
-        }
 
-        private string ObterCaminhoLog()
-        {
-            return Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                "debug_acesso_manual.txt"
-            );
-        }
-
-        private string MascararToken(string token)
-        {
-            if (string.IsNullOrWhiteSpace(token))
-                return "";
-
-            if (token.Length <= 20)
-                return "***";
-
-            return token.Substring(0, 10) + "...TOKEN_OCULTO..." + token.Substring(token.Length - 10);
+            return null;
         }
     }
 }
